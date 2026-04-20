@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Apis.Birlik.api_birlik import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos
+from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos,desbloquear_interaccion,bloquear_interaccion
 from GoogleChrome.fecha_y_hora import get_timestamp
 from Correo.correo_it import enviarCaptcha
 
@@ -23,6 +23,7 @@ ruc_crecer_vly = '20600098633'
 ids_compania = [32]
 #-------------CREDENCIALES---------------
 login_url_crecer_vida_ley = os.getenv("login_url_crecer_vida_ley")
+puerto = os.getenv("NOVNC_PORT")
 username_crecer = os.getenv("username_crecer")
 password_crecer = os.getenv("password_crecer")
 para_venv = os.getenv("para")
@@ -314,12 +315,10 @@ def main():
             pass_input.send_keys(password_crecer)
             print("⌨️ Digitando el Password")
    
-            print("🧩 Resuelve el CAPTCHA manualmente y clic en 'Ingresar'.")
-
             desbloquear_interaccion()
 
-            puerto = os.getenv("NOVNC_PORT")
-            enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley",ruta_imagen=None)
+            if not enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley"):
+                raise Exception("No se pudo enviar el correo para resolver el captcha")
 
             # Espera humana (hasta 5 minutos)
             wait_humano = WebDriverWait(driver,300)

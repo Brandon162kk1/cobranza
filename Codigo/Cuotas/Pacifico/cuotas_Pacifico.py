@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 #from excels.estilosExcel import guardar_excel_con_formato
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
-from Apis.api_birlik import consultarAPI
+from Apis.Birlik.api_birlik import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
 from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
 # from tkinter.tix import CELL

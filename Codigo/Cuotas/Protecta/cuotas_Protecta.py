@@ -14,12 +14,12 @@ from datetime import datetime
 from selenium.webdriver.support.ui import WebDriverWait
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.api_birlik import consultarAPI
+from Apis.Birlik.api_birlik import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
-from Cuotas.cuotas_Positiva import mover_y_hacer_click_simple, escribir_lento
+from Cuotas.Positiva.cuotas_Positiva import mover_y_hacer_click_simple, escribir_lento
 from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_actual
 from Correo.correo_it import enviarCaptcha
-from Cuotas.cuotas_Crecer import bloquear_interaccion,desbloquear_interaccion
+from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,desbloquear_interaccion,bloquear_interaccion,guardarJson
 #------------ PROTECTA ----------------
 ruc_protecta_vly = '20517207331'
 ids_compania = [25]
@@ -329,151 +329,149 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
         return f"Coinciden" if resultado_importe else f"No coinciden" ,"Válido" if resultado_sunat else "No Válido" ,"Registrado" if resultado_birlik else "No registrado" , resultado_estado, resultado_accion
     
 def main():  
-    
-    puerto = os.getenv("NOVNC_PORT")
-    display_num = os.getenv("DISPLAY_NUM", "0")
-    os.environ["DISPLAY"] = f":{display_num}"
-
-    driver, wait = abrirDriver()
-
-    driver.get(url_protecta)
-    print("⌛ Ingresando a la URL")
-
-    user_input = wait.until(EC.presence_of_element_located((By.ID, "username")))
-    user_input.clear()
-
-    mover_y_hacer_click_simple(driver, user_input)
-    time.sleep(random.uniform(0.97, 0.99))
-
-    escribir_lento(user_input, username_protecta, min_delay=0.97, max_delay=0.99)
-    print("⌨️ Digitando el Username")
-
-    time.sleep(1 + random.random() * 1.5)
-
-    pass_input = wait.until(EC.presence_of_element_located((By.ID, "password")))
-    pass_input.clear()
-
-    mover_y_hacer_click_simple(driver, pass_input)
-    time.sleep(random.uniform(0.97, 0.99))
-
-    escribir_lento(pass_input, password_protecta, min_delay=0.97, max_delay=0.99)
-    print(f"⌨️ Digitando el Password '{password_protecta}'.")
-
-    desbloquear_interaccion()
-
-    #-------------
-    print("🧩 Resuelve el CAPTCHA manualmente y clic en 'Ingresar'.")
-
-    #------Carpetas de Descargas y Volumen del Docker----------
-    carpeta_descargas = "Downloads"
-    # --- Construir ruta de Downloads por defecto ---
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    ruta_carpeta_downloads = os.path.join(base_dir,carpeta_descargas)
-    #------ Carpeta Principal -------
-    nom_carp_principal= f"Reporte_Cuotas_Diarias_{get_fecha_actual()}"
-    carpeta_principal = os.path.join(ruta_carpeta_downloads, nom_carp_principal)
-    # Esto crea la carpeta si no existe
-    os.makedirs(carpeta_principal, exist_ok=True) 
-    ruta_imagen = os.path.join(carpeta_principal,f"{get_timestamp()}.png")
-    driver.save_screenshot(ruta_imagen)
-    enviarCaptcha(para_lista,copias_lista,puerto,"Protecta Vida Ley",ruta_imagen)
-    wait_humano = WebDriverWait(driver,300)
-    wait_humano.until(EC.presence_of_element_located((By.XPATH,"//a[contains(@class,'menu-item-father')][not(@hidden)]//span[normalize-space()='Mis Comprobantes']/ancestor::a")))
-
-    bloquear_interaccion()
-
-    print("✅ Login exitoso detectado (Cerrar sesión visible)")
-    print("🚀 Continuando flujo automáticamente")
-    #-------------
-
-    # ingresar_btn = wait.until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(),'Ingresar')]")))
-    # ingresar_btn.click()
-    # print("🖱️ Clic en 'Ingresar'.")
-
-    menu_mis_comprobantes = wait.until(EC.element_to_be_clickable((By.XPATH,"//a[contains(@class,'menu-item-father')][not(@hidden)]//span[normalize-space()='Mis Comprobantes']/ancestor::a")))
-
-    driver.execute_script("""
-        arguments[0].scrollIntoView({block:'center'});
-        arguments[0].click();
-    """, menu_mis_comprobantes)
-
-    print("🖱️ Click en 'Mis Comprobantes'.")
-
-    # span_element = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='VIDA LEY']")))
-    # print("🖱️ Clic en 'VIDA LEY'")
-    # time.sleep(3)
-
-    # # Buscar el enlace de "Pólizas" y hacer clic
-    # polizas_element = wait.until(EC.element_to_be_clickable(
-    #     (By.XPATH, "//a[.//span[normalize-space(text())='Pólizas']]")
-    # ))
-    # polizas_element.click()
-    # print("🖱️ Clic en 'Pólizas'")
-
-    # time.sleep(3)
-
-    # consulta_element = wait.until(EC.element_to_be_clickable(
-    #     (By.XPATH, "//span[text()=' Consulta de Transacciones ']/parent::a")
-    # ))
-    # consulta_element.click()
-    # print("🖱️ Clic en 'Consulta de Transacciones'")
 
     while True:
 
+        ruta_salida_API,ruta_salida,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,carpeta_compañia,carpeta_principal = crearCarpetas(nombre_carpeta_compañia,tipo=2,cia_a_verificar=None)
+    
         try:
-            todos_los_datos = consultarAPI(url_datos_para_cancelar_cuotas,ids_compania)
 
-            if not todos_los_datos:
-                raise Exception("No se recibió información de ninguna compañía.")
+            puerto = os.getenv("NOVNC_PORT")
+            display_num = os.getenv("DISPLAY_NUM", "0")
+            os.environ["DISPLAY"] = f":{display_num}"
 
-            log_path,ruta_salida_API,ruta_salida,ruta_maestro,nombre_hoja, ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carpeta_errores,carpeta_compañia,carpeta_principal = crearCarpetas(todos_los_datos,nombre_carpeta_compañia,tipo=2,cia_a_verificar=None)
+            driver, wait = abrirDriver(ruta_carpeta_facturas)
 
-            print("\n📁 Iniciando procesamiento para Protecta Vida Ley...")
+            driver.get(url_protecta)
+            print("⌛ Ingresando a la URL")
 
-            try:
-                df = pd.read_excel(ruta_salida_API, engine="openpyxl",dtype={"numeroDocumento": str})
-            except Exception as e:
-                raise Exception(f" Error al leer el archivo Excel: {e}")
+            user_input = wait.until(EC.presence_of_element_located((By.ID, "username")))
+            user_input.clear()
+
+            mover_y_hacer_click_simple(driver, user_input)
+            time.sleep(random.uniform(0.97, 0.99))
+
+            escribir_lento(user_input, username_protecta, min_delay=0.97, max_delay=0.99)
+            print("⌨️ Digitando el Username")
+
+            time.sleep(1 + random.random() * 1.5)
+
+            pass_input = wait.until(EC.presence_of_element_located((By.ID, "password")))
+            pass_input.clear()
+
+            mover_y_hacer_click_simple(driver, pass_input)
+            time.sleep(random.uniform(0.97, 0.99))
+
+            escribir_lento(pass_input, password_protecta, min_delay=0.97, max_delay=0.99)
+            print(f"⌨️ Digitando el Password '{password_protecta}'.")
+
+            desbloquear_interaccion()
             
-            # Nuevas columnas para registrar los resultados
-            df["Importe"] = ""
-            df["Sunat"] = ""
-            df["Birlik"] = ""
-            df["Estado"] = ""
-            df["Acción"] = ""
+            enviarCaptcha(para_lista,copias_lista,puerto,"Protecta Vida Ley")
+            wait_humano = WebDriverWait(driver,300)
+            wait_humano.until(EC.presence_of_element_located((By.XPATH,"//a[contains(@class,'menu-item-father')][not(@hidden)]//span[normalize-space()='Mis Comprobantes']/ancestor::a")))
 
-            total_filas = len(df)
+            bloquear_interaccion()
+            #-------------
 
-            # 2. Iterar sobre cada fila
-            for index, row in df.iterrows():
-                print(f"\n--- Procesando fila {index + 2} de {total_filas + 1} ---")
+            # ingresar_btn = wait.until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(),'Ingresar')]")))
+            # ingresar_btn.click()
+            # print("🖱️ Clic en 'Ingresar'")
+
+            menu_mis_comprobantes = wait.until(EC.element_to_be_clickable((By.XPATH,"//a[contains(@class,'menu-item-father')][not(@hidden)]//span[normalize-space()='Mis Comprobantes']/ancestor::a")))
+
+            print("✅ Login exitoso detectado")
+            print("🚀 Continuando flujo automáticamente")
+
+            driver.execute_script("""
+                arguments[0].scrollIntoView({block:'center'});
+                arguments[0].click();
+            """, menu_mis_comprobantes)
+
+            print("🖱️ Click en 'Mis Comprobantes'")
+
+            # span_element = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='VIDA LEY']")))
+            # print("🖱️ Clic en 'VIDA LEY'")
+            # time.sleep(3)
+
+            # # Buscar el enlace de "Pólizas" y hacer clic
+            # polizas_element = wait.until(EC.element_to_be_clickable(
+            #     (By.XPATH, "//a[.//span[normalize-space(text())='Pólizas']]")
+            # ))
+            # polizas_element.click()
+            # print("🖱️ Clic en 'Pólizas'")
+
+            # time.sleep(3)
+
+            # consulta_element = wait.until(EC.element_to_be_clickable(
+            #     (By.XPATH, "//span[text()=' Consulta de Transacciones ']/parent::a")
+            # ))
+            # consulta_element.click()
+            # print("🖱️ Clic en 'Consulta de Transacciones'")
+
+            while True:
 
                 try:
-                    # Procesar la fila usando tu lógica
-                    importe_estado, sunat_estado, birlik_estado,estado_estado,accion_estado = procesar_fila(driver,wait,row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carpeta_errores,carpeta_compañia)
 
-                    df.at[index, "Importe"] = importe_estado
-                    df.at[index, "Sunat"] = sunat_estado
-                    df.at[index, "Birlik"] = birlik_estado
-                    df.at[index, "Estado"] = estado_estado
-                    df.at[index, "Acción"] = accion_estado
+                    json_cuotas = consultarAPI(url_datos_para_cancelar_cuotas,ids_compania)
 
-                    df.to_excel(ruta_salida, index=False)
-                    print(f"✔ Fila {index} guardada correctamente.")
+                    if not json_cuotas:
+                        raise Exception("No se recibió información de ninguna compañía.")
 
-                except Exception as e:
-                    print(f"❌ Error procesando fila {index}: {e}")
-                    df.to_excel(ruta_salida, index=False)  
-                    continue
-     
-                time.sleep(3)
+                    print("\n📁 Iniciando procesamiento para Protecta Vida Ley...")
 
-            df.to_excel(ruta_salida, index=False)
+                    # Guardar data del Json en un Excel para procesar fila por fila
+                    guardarJson(json_cuotas,ruta_salida_API)
+
+                    try:
+                        df = pd.read_excel(ruta_salida_API, engine="openpyxl",dtype={"numeroDocumento": str})
+                    except Exception as e:
+                        raise Exception(f" Error al leer el archivo Excel: {e}")
             
+                    # Nuevas columnas para registrar los resultados
+                    df["Importe"] = ""
+                    df["Sunat"] = ""
+                    df["Birlik"] = ""
+                    df["Estado"] = ""
+                    df["Acción"] = ""
+
+                    total_filas = len(df)
+
+                    # 2. Iterar sobre cada fila
+                    for index, row in df.iterrows():
+                        print(f"\n--- Procesando fila {index + 2} de {total_filas + 1} ---")
+
+                        try:
+                            # Procesar la fila usando tu lógica
+                            importe_estado, sunat_estado, birlik_estado,estado_estado,accion_estado = procesar_fila(driver,wait,row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carpeta_errores,carpeta_compañia)
+
+                            df.at[index, "Importe"] = importe_estado
+                            df.at[index, "Sunat"] = sunat_estado
+                            df.at[index, "Birlik"] = birlik_estado
+                            df.at[index, "Estado"] = estado_estado
+                            df.at[index, "Acción"] = accion_estado
+
+                            print(f"✅ Fila {index} guardada correctamente")
+
+                        except Exception as e:
+                            print(f"❌ Error procesando fila {index}: {e}")
+                        finally:
+                            df.to_excel(ruta_salida, index=False)
+                            time.sleep(1)
+     
+                        time.sleep(3)
+            
+                except Exception as e:
+                    print(f"\n🟡 Proceso Detenido, Motivo: {e}")
+                finally:           
+                    if json_cuotas:
+                        os.remove(ruta_salida_API)
+                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+                        time.sleep(10)
+
         except Exception as e:
-            print(f"\n🟡 Proceso Detenido, por: {e}")
+            print(f"\n🟡 Proceso Detenido por fuerza Mayor, Motivo: {e}")
         finally:
-        
             if os.path.exists(carpeta_principal):
                 shutil.rmtree(carpeta_compañia)
                 print("🧹 Carpeta eliminada correctamente")
