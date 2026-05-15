@@ -1,9 +1,7 @@
 ﻿#-- Imports ---
-import subprocess
 import time
 import os
 import pandas as pd
-import socket
 import shutil
 import zipfile
 import re
@@ -12,24 +10,21 @@ import pdfplumber
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
 from GoogleChrome.fecha_y_hora import get_timestamp
 from datetime import datetime
 
-#--------- COMPAÑÍA SANITAS QUALITAS------
+#--------- Datos ------
 ruc_qualitas = '20553157014'
-# Lista de IDs de compañía
 ids_compania = [26]
-#-------CREDENCIALES QUALITAS----------
+#----- Variables de Entorno -------
 login_url_qualitas = os.getenv("login_url_qualitas")
 claveCorredor = os.getenv("claveCorredor")
 username = os.getenv("usernameQualitas")
 password = os.getenv("passwordQualitas")
-nombre = os.getenv("CONT_NAME", socket.gethostname())
-#--- NOMBRE SERVICE DNS DOCKER PARA UTILIZAR EN LA API -----
-nom_serv = os.getenv("nom_serv")
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Qualitas_{get_timestamp()}"
 
@@ -76,41 +71,34 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
     resultado_estado = None
     resultado_accion = ""
 
-    # if numero_proforma_birlik != "3061537":
-    #     return f"Pagina Web en Mantenimiento" if resultado_importe else "Pagina Web en Mantenimiento" ,"Pagina Web en Mantenimiento" if resultado_sunat else "Pagina Web en Mantenimiento" ,"Pagina Web en Mantenimiento" if resultado_birlik else "Pagina Web en Mantenimiento" , "" if resultado_estado else "Pagina Web en Mantenimiento", "" if resultado_accion else "Pagina Web en Mantenimiento"
-
     try:
 
         time.sleep(2)
-        # ------------------ Inicio del Flujo de Automatización ------------------
-        
+  
         poliza_input = wait.until(EC.visibility_of_element_located((By.ID, "numberPolicy")))
         poliza_input.clear()
         poliza_input.send_keys(numero_poliza_birlik)
         print(f"✅ Póliza ingresada: {numero_poliza_birlik}")
 
-        # Esperar que desaparezca el loader
         wait.until(EC.invisibility_of_element_located((By.ID, "loader")))
 
-        # Esperar botón clickeable
         boton = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "img[alt='Consulta poliza']")))
         boton.click()
-        print("🖱️ Clic en 'Buscar'.")
+        print("🖱️ Clic en 'Buscar'")
 
-        # Esperar que desaparezca el loader
         wait.until(EC.invisibility_of_element_located((By.ID, "loader")))
 
         header = wait.until(EC.element_to_be_clickable((By.XPATH, "//p[contains(text(),'Recibos de póliza')]")))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", header)
         header.click()
-        print("🖱️ Clic en el div de 'Recibos de Poliza'.")
+        print("🖱️ Clic en el div de 'Recibos de Poliza")
    
         contenedor = wait.until(EC.presence_of_element_located((By.ID, "data-receipts")))
 
         tabla = contenedor.find_element(By.TAG_NAME, "table")
 
         filas = tabla.find_elements(By.CSS_SELECTOR, "tbody tr")
-        print("Total de filas encontradas:", len(filas))
+        print(f"Total de filas encontradas: {len(filas) - 1}")
 
         encontrado = False
 
@@ -128,7 +116,12 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
             importe = cols[5].replace("$", "").strip()   # Columna 6
             estado = cols[6]                             # Columna 8
 
+            #print(f"Fila {i} Cuota {codigoCuota} Importe {importe} Estado {estado}")
+
             if numero_proforma_birlik in codigoCuota:
+
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", fila)
+
                 print(f"Fila {i} --> CodigoCuota: {codigoCuota} | Importe: {importe} | Estado: {estado}")
                 encontrado = True
 
@@ -211,6 +204,9 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                         raise Exception(f"Error descargando ZIP, Motivo -> {e}")
                        
                     fecha_emision_pdf,numero_comprobante = extraer_datos_pdf(ruta_pdf_salida)
+
+                    print(f"Numero de comprobante {numero_comprobante}")
+
                     fecha_convertida = fecha_emision_pdf.replace("-", "/")
 
                     fecha_habiles_factura = []
@@ -223,11 +219,11 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                     for fecha in fecha_habiles_factura:
                         print("---------------------------------------")
-                        print(f"⌛ Probando con la Fecha hábil: {fecha}")
+                        #print(f"⌛ Probando con la Fecha hábil: {fecha}")
 
                         nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
                         ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                        resultado = consultarValidezSunat(driver,wait,ruc_qualitas,tipo_doc_birlik,ruc_cliente_birlik,numero_comprobante,fecha,importe,ruta_imagen_sunat)
+                        resultado = consultarValidezSunat(driver,wait,ruc_qualitas,tipo_doc_birlik,ruc_cliente_birlik,numero_comprobante,fecha,importe,ruta_imagen_sunat,ruta_carpeta_errores)
 
                         driver.switch_to.window(ventana_principal_qualitas)
                         print("🔄 Volviendo a la ventana de la CIA")
@@ -300,7 +296,7 @@ def main():
             pass_input = wait.until(EC.presence_of_element_located((By.ID, "_com_liferay_login_web_portlet_LoginPortlet_password")))
             pass_input.clear()
             pass_input.send_keys(password)
-            print(f"⌨️ Digitando el Password '{password}'")
+            print(f"⌨️ Digitando el Password")
 
             # btn = wait.until(EC.element_to_be_clickable((By.ID, "_com_liferay_login_web_portlet_LoginPortlet_nlfq")))
             # driver.execute_script("arguments[0].click();", btn)
@@ -337,7 +333,7 @@ def main():
                     try:
                         df = pd.read_excel(ruta_salida_API, engine="openpyxl",dtype={"numeroDocumento": str})
                     except Exception as e:
-                        raise Exception(f" Error al leer el archivo Excel: {e}")
+                        raise Exception(f" Error al leer el archivo Excel | Motivo: {e}")
             
                     # Nuevas columnas para registrar los resultados
                     df["Importe"] = ""
@@ -363,7 +359,7 @@ def main():
                             df.at[index, "Estado"] = estado_estado
                             df.at[index, "Acción"] = accion_estado
 
-                            print(f"✅ Fila {index} guardada correctamente")
+                            print(f"\n✅ Fila {index} guardada correctamente")
                         except Exception as e:
                             print(f"❌ Error procesando fila {index}: {e}")
                         finally:
@@ -372,22 +368,21 @@ def main():
                         time.sleep(3)
     
                 except Exception as e:
-                    print(f"\n🟡 Proceso Detenido, Motivo: {e}")
+                    print(f"❌ Proceso Detenido, Motivo: {e}")
                 finally:   
                     
                     if json_cuotas:
                         os.remove(ruta_salida_API)
-                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
                         time.sleep(10)
 
         except Exception as e:
-            print(f"\n🟡 Proceso Detenido por fuerza Mayor, Motivo: {e}")
+            print(f"❌ Proceso Detenido por fuerza Mayor, Motivo: {e}")
         finally:
             if os.path.exists(carpeta_principal):
                 shutil.rmtree(carpeta_compañia)
-                print("🧹 Carpeta eliminada correctamente")
-            else:
-                print("⚠️ La carpeta no existe")
+                #print("🧹 Carpeta eliminada correctamente")
+
             print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
             time.sleep(10)
             

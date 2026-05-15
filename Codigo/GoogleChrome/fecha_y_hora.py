@@ -34,12 +34,3 @@ def get_segundo():
 
 def get_pos_fecha_dmy():
     return datetime.now(tz_peru).strftime("%d/%m/%Y")
-
-def saludo_por_hora():
-
-    if 6 <= get_fecha_hoy().hour < 12:
-        return "Buenos días"
-    elif 12 <= get_fecha_hoy().hour < 18:
-        return "Buenas tardes"
-    else:
-        return "Buenas noches"

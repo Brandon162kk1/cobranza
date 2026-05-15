@@ -1,17 +1,17 @@
 ﻿#-- Froms --
-import logging
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from datetime import datetime, timedelta
+from selenium.webdriver.support.ui import Select
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import cancelar_y_agregar_cuota, agregar_comprobante_pago,url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import cancelar_y_agregar_cuota, agregar_comprobante_pago
+from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos
 from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
-from selenium.webdriver.support.ui import Select
+from Cuotas.Positiva.funciones import mover_y_hacer_click_simple, escribir_lento, validar_pagina
 #-- Imports --
 import os
 import time
@@ -23,59 +23,12 @@ import shutil
 url_Positiva = os.getenv("url_Positiva")
 username = os.getenv("usernamePositiva")
 password = os.getenv("passwordPositiva")
-# Lista de IDs de compañía
+#----- Datos -------
 ids_compania = [12,13,14,36,38]
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Positiva_{get_timestamp()}"
-#-------------- Lock File -------------
-# Ruta del directorio compartido entre contenedores
-SYNC_DIR = "/app/sync"
-# Asegurar que exista dentro del volumen (solo la primera vez)
-os.makedirs(SYNC_DIR, exist_ok=True)
-# Archivo de lock compartido
-LOCK_FILE = os.path.join(SYNC_DIR, "session.lock")
 
-def acquire_lock():
-    try:
-        # Intentar crear el archivo de lock
-        fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-        return True
-    except FileExistsError:
-        # Ya existe => alguien más tiene el lock
-        return False
-
-def release_lock():
-    try:
-        os.remove(LOCK_FILE)
-        print("🔓 Lock liberado.")
-    except FileNotFoundError:
-        pass
-
-def wait_for_lock():
-    print("🔒 Esperando que se libere el lock...")
-    while True:
-        if not os.path.exists(LOCK_FILE):
-            if acquire_lock():
-                print("✅ Lock adquirido.")
-                return True
-        time.sleep(5)  # espera 5 segundos antes de volver a intentar
-
-def parse_fecha(fecha_raw):
-    # Si ya es Timestamp, la retorna igual
-    if isinstance(fecha_raw, pd.Timestamp):
-        return fecha_raw
-    fecha_str = str(fecha_raw)
-    # Si la fecha tiene "-" en la posición 4, probablemente es "YYYY-MM-DD"
-    if "-" in fecha_str and fecha_str[4] == "-":
-        # Formato ISO (YYYY-MM-DD), NO uses dayfirst
-        return pd.to_datetime(fecha_str, dayfirst=False)
-    else:
-        # Formato DD/MM/YYYY o similar, usa dayfirst
-        return pd.to_datetime(fecha_str, dayfirst=True)
-
-def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante):
+def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores):
     
     tipo_doc_birlik = str(row["tipoDocumento"]).strip()
     num_poliza_birlik = str(row["numeroPoliza"]).strip()
@@ -252,7 +205,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                                     importe_valor = float(cta_cobrar.replace(',', '')) 
 
-                                    print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(importe_valor)}")
+                                    #print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(importe_valor)}")
 
                                     diferencia = abs(float(importe_valor) - float(importe_total_birlik))
                                     if diferencia > 0.05:
@@ -281,10 +234,8 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                         
                                         try:
 
-                                            ventanas_antes = len(driver.window_handles)
                                             ventana_principal_positiva = driver.current_window_handle
 
-                                            # Guardar archivos antes del clic
                                             archivos_antes = set(os.listdir(ruta_carpeta_facturas))
 
                                             accion_img = accion_cell.find_element(By.TAG_NAME, "img")
@@ -301,37 +252,6 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                                                 print(f"🔄 Archivo renombrado a '{num_poliza_birlik}_{comprobante_valor}.pdf'")
                                             else:
                                                 raise Exception("No se encontró archivo nuevo después de descargar")
-
-                                            # wait.until(lambda d: len(d.window_handles) > ventanas_antes)
-                            
-                                            # driver.switch_to.window(driver.window_handles[-1])
-                                            # print("🔄 Cambiado a la nueva ventana/pestaña.")
-
-                                            # wait.until(lambda d: len(d.window_handles) > 1)
-                                            # nuevas_ventanas = [w for w in driver.window_handles if w != ventana_original]
-                                            # driver.switch_to.window(nuevas_ventanas[0])
-
-                                            # destino_factura = f"{ruta_carpeta_facturas}/{num_poliza_birlik}_{comprobante_valor}"
-                                            # ruta_factura = os.path.join(ruta_carpeta_facturas, f"{num_poliza_birlik}_{comprobante_valor}.pdf")
-
-                                            # #------------------------------
-                                            # time.sleep(3)
-                                            # subprocess.run(["xdotool", "search", "--name", "Save File", "windowactivate", "windowfocus"])
-                                            # print("💡 Se hizo FOCO en la nueva ventana de dialogo de Linux Debian")
-                                            # time.sleep(3)                              
-                                            # subprocess.run(['xdotool', 'type',"--delay", "100", destino_factura])
-                                            # print("📄 Se escribió el nombre del archivo")
-                                            # time.sleep(3)
-                                            # subprocess.run(['xdotool', 'key', 'Return'])
-                                            # print("🖱️ Se dio Enter para confirmar")
-                                            # time.sleep(3)
-                                            # #------------------------------
-
-                                            # try:
-                                            #     driver.switch_to.window(ventana_original)
-                                            #     print("🔄 Volvimos a la ventana original")
-                                            # except Exception as e:
-                                            #     print(f"❌ No se pudo volver a la ventana original, Motivo: {e}")
                             
                                             time.sleep(3)
 
@@ -341,7 +261,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                                                 nombre_imagen_sunat = f"{numero_proforma_birlik}_{num_poliza_birlik}.png"
                                                 ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                                                resultado = consultarValidezSunat(driver,wait,ruc_emisor,tipo_doc_birlik,num_doc_birlik,comprobante_valor,fecha,cta_cobrar,ruta_imagen_sunat)
+                                                resultado = consultarValidezSunat(driver,wait,ruc_emisor,tipo_doc_birlik,num_doc_birlik,comprobante_valor,fecha,cta_cobrar,ruta_imagen_sunat,ruta_carpeta_errores)
 
                                                 driver.switch_to.window(ventana_principal_positiva)
                                                 print("🔄 Volviendo a la ventana de la CIA")
@@ -394,63 +314,12 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
     finally:
         driver.refresh()
         return f"Coinciden" if resultado_importe else f"No Existe en la CIA" ,"Válido" if resultado_sunat else f"No Existe en la CIA" ,"Cuota Cancelada" if resultado_birlik else "Cuota Pendiente" , f"Cancelado" if resultado_estado else f"No Existe en la CIA" , resultado_accion
-    
-def validar_pagina(driver):
-
-    asunto = ""
-
-    try:
-
-        # Validar si aparece el mensaje de error en el body
-        if "The requested URL was rejected. Please consult with your administrator." in driver.page_source:
-            asunto = "❌ Página web de La Positiva fuera de Servicio"
-            return False,asunto
-
-        # Validar si aparece el campo de usuario
-        user_field = WebDriverWait(driver,5).until(
-            EC.presence_of_element_located((By.NAME, "txtUsuario"))
-        )
-        if user_field:
-            asunto = "❌ Página web de La Positiva fuera de Servicio"
-            return False,asunto
-
-    except TimeoutException:
-        print("✅ Continuamos")
-        return True,asunto
-
-def escribir_lento(elemento, texto,min_delay=0.7, max_delay=0.9):
-    """Envía texto carácter por carácter con retrasos aleatorios."""
-    for letra in texto:
-        elemento.send_keys(letra)
-        time.sleep(random.uniform(min_delay, max_delay))
-
-def mover_y_hacer_click_simple(driver, elemento, steps=6, pause_between=0.06):
-    """
-    Mueve el mouse en 'steps' pasos hacia el centro del elemento y hace click.
-    driver: tu instancia de webdriver
-    elemento: WebElement destino
-    """
-    action = ActionChains(driver)
-    # asegurarnos que el elemento esté visible en pantalla
-    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elemento)
-    time.sleep(random.uniform(0.15, 0.45))
-
-    # posiciona el mouse sobre el elemento (move_to_element genera mouseover)
-    action.move_to_element(elemento).pause(random.uniform(0.05, 0.18)).perform()
-
-    # pequeños movimientos aleatorios alrededor antes del click
-    for _ in range(steps):
-        offset_x = random.randint(-6, 6)
-        offset_y = random.randint(-6, 6)
-        action.move_by_offset(offset_x, offset_y).pause(pause_between)
-    # volver al elemento y click
-    action.move_to_element(elemento).pause(random.uniform(0.08, 0.2)).click().perform()
 
 def main():
       
     while True:
 
-        ruta_salida_API,ruta_salida,ruta_carpeta_facturas,ruta_carpeta_comprobante,_,carpeta_compañia,carpeta_principal = crearCarpetas(nombre_carpeta_compañia,tipo=2,cia_a_verificar=None)
+        ruta_salida_API,ruta_salida,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,carpeta_compañia,carpeta_principal = crearCarpetas(nombre_carpeta_compañia,tipo=2,cia_a_verificar=None)
 
         try:
         
@@ -497,12 +366,10 @@ def main():
                     aceptar_btn = wait.until(EC.presence_of_element_located((By.XPATH, "//button[.//span[text()='Aceptar']]")))
                     aceptar_btn.click()
                     print("🖱️ Clic en Aceptar")
-
                     raise Exception("Credenciales Incorrectas, Revisar el Usuario y Contraseña proporcionados")
             except:
                 pass
 
-            # Despues de Login
             wait.until(EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'menu-item')]//span[normalize-space()='Autogestión']/parent::div")))
             autogestion = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'menu-item')]//span[normalize-space()='Autogestión']/parent::div")))
 
@@ -513,7 +380,7 @@ def main():
             # Despues de Autogestion
             ov = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='OV']")))
             ov.click()
-            print("🖱️ Clic en 'OV' ")
+            print("🖱️ Clic en 'OV'")
 
             wait.until(lambda d: len(d.window_handles) > 1)
 
@@ -525,9 +392,11 @@ def main():
                 alert.accept()
                 print("✅ Alerta aceptada")
             except:
-                print("✅ No apareció ninguna alerta")
+                pass
                 
-            resultado,asunto = validar_pagina(driver)    
+            driver.refresh()
+            time.sleep(5)
+            resultado,asunto = validar_pagina(driver)  
 
             if not resultado:
                 raise Exception(asunto)
@@ -565,7 +434,7 @@ def main():
                     try:
                         df = pd.read_excel(ruta_salida_API, engine="openpyxl", dtype={"numeroDocumento": str})
                     except Exception as e:
-                        raise Exception(f"Error al leer el archivo Excel: {e}")
+                        raise Exception(f"Error al leer el archivo Excel | Motivo: {e}")
 
                     df["Importe"] = ""
                     df["Sunat"] = ""
@@ -577,10 +446,9 @@ def main():
 
                     for index, row in df.iterrows():
                         print(f"\n--- Procesando fila {index + 2} de {total_filas + 1} ---")
-                        #wait_for_lock()
                         try:
                             importe_estado,sunat_estado,birlik_estado,estado_estado,accion_estado = procesar_fila(driver,wait,
-                                row,ruta_carpeta_facturas,ruta_carpeta_comprobante)
+                                row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores)
 
                             df.at[index, "Importe"] = importe_estado
                             df.at[index, "Sunat"] = sunat_estado
@@ -588,34 +456,31 @@ def main():
                             df.at[index, "Estado"] = estado_estado
                             df.at[index, "Acción"] = accion_estado
 
-                            print(f"✅ Fila {index} guardada correctamente.")
+                            print(f"\n✅ Fila {index} guardada correctamente")
                         except Exception as e:
-                            print(f"❌ Error en fila {index}, Motivo: {e}")
+                            print(f"❌ Error en fila {index} | Motivo: {e}")
                         finally:
                             df.to_excel(ruta_salida, index=False)
 
-                        time.sleep(3)
+                        time.sleep(2)
 
                 except Exception as e:
-                    print(f"\n🟡 Proceso Detenido, por :{e}")
+                    print(f"❌ Proceso Detenido, por :{e}")
                 finally:
-                    #release_lock()
                     if json_cuotas:
                         os.remove(ruta_salida_API)
-                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
                         time.sleep(10)
 
         except Exception as e:
-            print(f"\n🟡 Proceso Detenido por fuerza Mayor, Motivo: {e}")
+            print(f"❌ Proceso Detenido por fuerza Mayor | Motivo: {e}")
 
             if os.path.exists(carpeta_principal):
                 shutil.rmtree(carpeta_compañia)
-                print("🧹 Carpeta eliminada correctamente")
-            else:
-                print("⚠️ La carpeta no existe")
+                #print("🧹 Carpeta eliminada correctamente")
 
             print("⌛ Esperando 30 minutos para intentar reiniciar el proceso")
-            time.sleep(1800) #---> Espera 30 min de forma manual
+            time.sleep(1800)
 
 if __name__ == "__main__":
     main()

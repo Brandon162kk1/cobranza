@@ -12,28 +12,27 @@ from selenium.common.exceptions import TimeoutException
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos,desbloquear_interaccion,bloquear_interaccion
 from GoogleChrome.fecha_y_hora import get_timestamp
-from Correo.correo_it import enviarCaptcha
+from Correo.armar_asunto import enviarCaptcha
 
-#------------CRECER----------------
+#----- Datos ----------------------
 ruc_crecer_vly = '20600098633'
 ids_compania = [32]
-#-------------CREDENCIALES---------------
+#----- Variables de Entorno -------
 login_url_crecer_vida_ley = os.getenv("login_url_crecer_vida_ley")
 puerto = os.getenv("NOVNC_PORT")
 username_crecer = os.getenv("username_crecer")
 password_crecer = os.getenv("password_crecer")
-para_venv = os.getenv("para")
+para_venv = os.getenv("para_todo")
 para_lista = para_venv.split(",") if para_venv else []
-copia_venv = os.getenv("copia_cuotas")
+copia_venv = os.getenv("copia_todo")
 copias_lista = copia_venv.split(",") if copia_venv else []
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Crecer_VidaLey_{get_timestamp()}"
-# --- Configuración 2Captcha---
-API_KEY = "8b61feec172173ef48060a723af1b6c7"
 
 #------- Errores comunes de 2Captcha
 # ERROR_WRONG_USER_KEY → API key incorrecta.
@@ -44,7 +43,6 @@ API_KEY = "8b61feec172173ef48060a723af1b6c7"
 
 def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores):
 
-    # Extraer valores y quitar espacios en blanco
     id_cuota_birlik = str(row["id_Cuota"]).strip()
     ruc_cliente_birlik = str(row["numeroDocumento"]).strip()
     tipo_doc_birlik = str(row["tipoDocumento"]).strip()
@@ -238,7 +236,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                                 #------------INGRESA A SUNAT-------  
                                 nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
                                 ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                                resultado = consultarValidezSunat(driver,wait,ruc_crecer_vly,tipo_doc_birlik,ruc_cliente_birlik,comprobante,fecha_emision_comprobante,prima_total,ruta_imagen_sunat)
+                                resultado = consultarValidezSunat(driver,wait,ruc_crecer_vly,tipo_doc_birlik,ruc_cliente_birlik,comprobante,fecha_emision_comprobante,prima_total,ruta_imagen_sunat,ruta_carpeta_errores)
 
                                 driver.switch_to.window(ventana_principal_crecer)
                                 print("🔄 Volviendo a la ventana de la CIA")
@@ -315,32 +313,32 @@ def main():
             pass_input.send_keys(password_crecer)
             print("⌨️ Digitando el Password")
    
-            desbloquear_interaccion()
+            try:
+                enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley")
+            except Exception as e:
+                raise Exception(f"Error enviando el correo -> {e}")
 
-            if not enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley"):
-                raise Exception("No se pudo enviar el correo para resolver el captcha")
+            try:
+                desbloquear_interaccion()
+                wait_humano = WebDriverWait(driver,300)
+                wait_humano.until(EC.presence_of_element_located((By.XPATH, "//a[contains(normalize-space(),'Cerrar sesión')]")))
+            except TimeoutException as e:
+                raise Exception("Se acabo el tiempo para ingresar a la compañia")
+            finally:
+                bloquear_interaccion()
 
-            # Espera humana (hasta 5 minutos)
-            wait_humano = WebDriverWait(driver,300)
-            wait_humano.until(EC.presence_of_element_located((By.XPATH, "//a[contains(normalize-space(),'Cerrar sesión')]")))
-
-            bloquear_interaccion()
-
-            print("✅ Login exitoso detectado (Cerrar sesión visible)")
+            print("✅ Login exitoso detectado")
             print("🚀 Continuando flujo automáticamente")
 
-            # Esperamos que el SVG esté cargado (opcional pero recomendado)
             span_element = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Gestión de Cotización']")))
             actions = ActionChains(driver)
             actions.move_to_element(span_element).click().perform()
             print("🖱️ Clic en 'Gestion de Cotizacion'")
             time.sleep(3)
 
-            # Esperar que el enlace esté disponible
             link = wait.until(EC.element_to_be_clickable((By.LINK_TEXT, "Bandeja de Evaluación")))
             link.click()
             print("🖱️ Clic en 'Bandeja de Evaluación'")
-
             time.sleep(3)
 
             while True:
@@ -354,15 +352,13 @@ def main():
 
                     print("\n📁 Iniciando procesamiento para Crecer Vida Ley...")
 
-                    # Guardar data del Json en un Excel para procesar fila por fila
                     guardarJson(json_cuotas,ruta_salida_API)
 
                     try:
                         df = pd.read_excel(ruta_salida_API, engine="openpyxl",dtype={"numeroDocumento": str})
                     except Exception as e:
-                        raise Exception(f" Error al leer el archivo Excel: {e}")
+                        raise Exception(f"Error al leer el archivo Excel | Motivo: {e}")
             
-                    # Nuevas columnas para registrar los resultados
                     df["Importe"] = ""
                     df["Sunat"] = ""
                     df["Birlik"] = ""
@@ -371,12 +367,10 @@ def main():
 
                     total_filas = len(df)
 
-                    # 2. Iterar sobre cada fila
                     for index, row in df.iterrows():
                         print(f"\n--- Procesando fila {index + 2} de {total_filas + 1} ---")
 
                         try:
-                            # Procesar la fila usando tu lógica
                             importe_estado, sunat_estado, birlik_estado,estado_estado,accion_estado = procesar_fila(
                                 driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores)
 
@@ -386,9 +380,9 @@ def main():
                             df.at[index, "Estado"] = estado_estado
                             df.at[index, "Acción"] = accion_estado
 
-                            print(f"✅ Fila {index} guardada correctamente")
+                            print(f"\n✅ Fila {index} guardada correctamente")
                         except Exception as e:
-                            print(f"❌ Error procesando fila {index}: {e}")
+                            print(f"❌ Error en fila {index} | Motivo: {e}")
                         finally:
                             df.to_excel(ruta_salida, index=False)
                             time.sleep(1)
@@ -396,23 +390,21 @@ def main():
                         time.sleep(3)
     
                 except Exception as e:
-                    print(f"\n🟡 Proceso Detenido, Motivo: {e}")
+                    print(f"❌ Proceso Detenido, por: {e}")
                 finally:   
                     
                     if json_cuotas:
                         os.remove(ruta_salida_API)
-                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
                         time.sleep(10)
 
         except Exception as e:
-            print(f"\n🟡 Proceso Detenido por fuerza Mayor, Motivo: {e}")
+            print(f"❌ Proceso Detenido por fuerza Mayor | Motivo: {e}")
         finally:
             if os.path.exists(carpeta_principal):
                 shutil.rmtree(carpeta_compañia)
-                print("🧹 Carpeta eliminada correctamente")
-            else:
-                print("⚠️ La carpeta no existe")
-            print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+
+            print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
             time.sleep(10)
 
 if __name__ == "__main__":

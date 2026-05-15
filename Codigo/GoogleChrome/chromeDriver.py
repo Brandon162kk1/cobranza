@@ -9,12 +9,20 @@ import time
 import subprocess
 
 #------ Carpetas de Descargas y Volumen del Docker ----------
-carpeta_descargas = "Downloads"
-ruta_carpeta_descargas = f"/app/{carpeta_descargas}"
+# carpeta_descargas = "Downloads"
+# ruta_carpeta_descargas = f"/app/{carpeta_descargas}"
 
-# --- Construir ruta de Downloads por defecto ---
-base_dir = os.path.dirname(os.path.abspath(__file__))
-ruta_carpeta_downloads = os.path.join(base_dir, "Downloads")
+# # --- Construir ruta de Downloads por defecto ---
+# base_dir = os.path.dirname(os.path.abspath(__file__))
+# ruta_carpeta_downloads = os.path.join(base_dir, "Downloads")
+
+ruta_carpeta_descargas = "/app/Downloads"
+
+def tomar_captura(driver, ruta_carpeta_errores, nombre_archivo):
+
+    nombre_completo = f"{nombre_archivo}_{get_timestamp()}.png"
+    ruta_completa = os.path.join(ruta_carpeta_errores, nombre_completo)
+    driver.save_screenshot(ruta_completa)
 
 def bloquear_interaccion():
     subprocess.run(["x11vnc", "-remote", "viewonly"], check=False)
@@ -67,7 +75,7 @@ def abrirDriver(ruta_descargas):
     return driver, wait
 
 def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
-    
+
     if tipo == 0 :
 
         # Se crea carpetas dentro de Downloads,Ejemplo --> :/app/Downloads/Facturas_enviadas
@@ -82,7 +90,7 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
         nombre_log = f"EvidenciaFacturasEnviadas_{get_timestamp()}.txt"
         log_path = os.path.join(carpeta_principal, nombre_log)
 
-        return ruta_salida_facturas , log_path
+        return ruta_salida_facturas #, log_path
 
     elif tipo == 5:
 
@@ -198,7 +206,7 @@ def guardarJson(json,ruta):
 
     df_final = pd.concat(json, ignore_index=True)
     df_final.to_excel(ruta, index=False)
-    #print(f"✅ Datos del API guardados en: {ruta}")
+    #print(f"✅ Datos del API guardados en: {ruta}")s
 
 def esperar_archivos_nuevos(directorio, archivos_antes, extension, cantidad, timeout=60):
     """

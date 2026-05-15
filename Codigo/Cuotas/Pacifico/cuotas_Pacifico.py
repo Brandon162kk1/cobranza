@@ -14,15 +14,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime, timedelta
-#from excels.estilosExcel import guardar_excel_con_formato
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
 from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
-# from tkinter.tix import CELL
 
-#--------- COMPAÑÍA PACIFICO ------
+#--------- Datos ------
 ids_compania = [23,33,24]            #-- > 24 es SALUD , 33 es Vida Ley , 23 es PACIFICO GENERAL (PENSION)
 ruc_pacifico_vida = '20332970411'   #--> Seguros de Vida
 ruc_pacifico_salud = '20431115825'  #--> Salud EPS
@@ -311,7 +310,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas, ruta_carpeta_comprobant
 
                                    nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
                                    ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                                   resultado = consultarValidezSunat(driver,wait,ruc_emisor,tipo_doc_birlik,ruc_cliente_birlik,factura_final,fecha,importe_total_birlik,ruta_imagen_sunat)
+                                   resultado = consultarValidezSunat(driver,wait,ruc_emisor,tipo_doc_birlik,ruc_cliente_birlik,factura_final,fecha,importe_total_birlik,ruta_imagen_sunat,ruta_carpeta_errores)
 
                                    driver.switch_to.window(ventana_principal_pacifico)
                                    print("🔄 Volviendo a la ventana de la CIA")

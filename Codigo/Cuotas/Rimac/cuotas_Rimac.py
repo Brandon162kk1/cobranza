@@ -8,20 +8,17 @@ import pandas as pd
 import shutil
 import requests
 import urllib.parse as urlparse
-#import pyautogui  # Solo si necesitas automatizar ventanas nativas
 #-- Froms ----
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from Excels.estilosExcel import guardar_excel_con_formato
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
 from GoogleChrome.fecha_y_hora import get_timestamp
-#from correoit.correo_ariadne import revisar_correo_ariadne
 
-#--------- COMPAÑÍA RIMAC ------
-# Lista de IDs de compañía
+#--------- Datos ------
 ids_compania = [27,28,35]
 #----- Variables de Entorno -------
 urlRimacCorredores = os.getenv("urlRimacCorredores")
@@ -29,9 +26,6 @@ usernameRimacCorredores = os.getenv("remitente")
 passwordRimacCorredores = os.getenv("passwordCorredores")
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Rimac_{get_timestamp()}"
-
-# --- Configuración ---
-API_KEY = "8b61feec172173ef48060a723af1b6c7"
 
 def resolver_recaptcha(driver, wait, API_KEY):
 
@@ -301,8 +295,6 @@ def main():
                 time.sleep(3)
             
             df.to_excel(ruta_salida, index=False)
-
-            guardar_excel_con_formato(ruta_salida,'Sheet1')
 
         except Exception as e:
             print(f"\n🟡 Proceso Detenido, por: {e}")

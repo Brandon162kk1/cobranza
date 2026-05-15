@@ -4,19 +4,19 @@ import time
 import pandas as pd
 #-- Froms --
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
 from collections import defaultdict
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
-from Birlik.cancelar_cuotas import url_cuotas_canceladas,usuarioBirlik,passwordBirlik,url_datos_para_enviar_factura
-from Apis.Birlik.api_birlik import consultarAPI
-from GoogleChrome.chromeDriver import crearCarpetas,abrirDriver,ruta_carpeta_downloads
+from selenium.webdriver.support import expected_conditions as EC
+from Birlik.urls import url_cuotas_canceladas,url_datos_para_enviar_factura
+from Birlik.cancelar_cuotas import iniciar_sesion_birlik
+from Apis.Birlik.metodo import consultarAPI
+from GoogleChrome.chromeDriver import crearCarpetas,abrirDriver,ruta_carpeta_downloads,guardarJson
 from GoogleChrome.fecha_y_hora import get_dia,get_mes,get_anio
 
 def analizarFacturasparaEnviarCliente(ruta_maestro_evaluar):
+
     try:
-        # Leer directamente la única hoja (lo que guardaste del API)
         df = pd.read_excel(ruta_maestro_evaluar, engine="openpyxl")
     except Exception as e:
         print(f"❌ Error al abrir el Excel de las cuotas para enviar Facturas, Detalle: {e}")
@@ -41,12 +41,12 @@ def analizarFacturasparaEnviarCliente(ruta_maestro_evaluar):
     # ---------------- ENVIAR POR CLIENTE ----------------
     for tipo, lista_cuotas in clientes_codigos.items():
 
-        display_num = os.getenv("DISPLAY_NUM", "0")  # fallback = 0
+        display_num = os.getenv("DISPLAY_NUM", "0")
         os.environ["DISPLAY"] = f":{display_num}"
 
         print(f"--- Enviando Facturas el {get_dia()}-{get_mes()}-{get_anio()} ---")
 
-        driver, wait = abrirDriver(ruta_carpeta_downloads) #ruta_carpeta_descargas
+        driver, wait = abrirDriver(ruta_carpeta_downloads)
 
         try:
             enviarFacturasCliente(driver, wait, lista_cuotas)
@@ -63,7 +63,10 @@ def enviarFacturasCliente(driver, wait, lista_cuotas):
     # Ir a una URL que requiera login y loguear una sola vez
     primer_fk = next(iter(grupos.keys()))
     driver.get(f"{url_cuotas_canceladas}{primer_fk}")
-    login_un_avez(wait, usuarioBirlik, passwordBirlik)
+
+    id_buscar_cuotas = "buscar_cuotas"
+    iniciar_sesion_birlik(driver, wait,id_buscar_cuotas)
+    #login_un_avez(wait, usuarioBirlik, passwordBirlik)
 
     # Recorrer cada cliente y enviar sus cuotas
     for fk_cliente, cuotas in grupos.items():
@@ -81,7 +84,7 @@ def enviarFacturasCliente(driver, wait, lista_cuotas):
                 print(f"⚠️ Cuota inválida (sin código o id): {q}")
                 continue
 
-            buscar_y_seleccionar_checkbox(driver, wait, codigo, id_cuota)
+            buscar_y_seleccionar_checkbox(driver, wait, codigo, id_cuota,id_buscar_cuotas)
 
         # Enviar una sola vez para todas las seleccionadas de ese cliente
         if clic_enviar_mensaje(driver, wait):
@@ -105,33 +108,10 @@ def agrupar_por_cliente(lista_cuotas):
             nombre_por_cliente[fk] = nom
     return grupos, nombre_por_cliente
 
-def login_un_avez(wait, username, password):
+def buscar_y_seleccionar_checkbox(driver, wait, codigoCuota, id_Cuota,id_buscar_cuotas):
 
     try:
-        email_input = wait.until(EC.presence_of_element_located((By.ID, 'signinSrEmail')))
-        email_input.clear()
-        email_input.send_keys(username)
-        print("✅ Ingresando Usuario")
-
-        time.sleep(2)
-
-        password_input = wait.until(EC.presence_of_element_located((By.ID, 'signupSrPassword')))
-        password_input.clear()
-        password_input.send_keys(password)
-        print("✅ Ingresando Contraseña")
-
-        password_input.send_keys(Keys.RETURN)
-        time.sleep(5)
-
-        print("🔐 Sesión iniciada")
-    except TimeoutException:
-        # Si no aparecen campos, probablemente ya estás logueado
-        print("ℹ️ Ya estabas logueado o no se requirió login.")
-
-def buscar_y_seleccionar_checkbox(driver, wait, codigoCuota, id_Cuota):
-
-    try:
-        input_busqueda = wait.until(EC.presence_of_element_located((By.ID, "buscar_cuotas")))
+        input_busqueda = wait.until(EC.presence_of_element_located((By.ID, id_buscar_cuotas)))
         input_busqueda.clear()
         input_busqueda.send_keys(codigoCuota)   
         time.sleep(2)
@@ -150,7 +130,8 @@ def buscar_y_seleccionar_checkbox(driver, wait, codigoCuota, id_Cuota):
         print(f"❌ Error seleccionando checkbox de {codigoCuota}: {e}")
 
 def clic_enviar_mensaje(driver, wait):
-    boton = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@onclick="enviarmensaje(this)"]')))
+
+    boton = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[@onclick="enviarMensajeMultiple(this)"]')))
     boton.click()
     print("🖱️ Clic en 'Enviar Mensaje' ")
 
@@ -163,7 +144,7 @@ def clic_enviar_mensaje(driver, wait):
     time.sleep(3)
 
     boton_enviar_modal.click()
-    print("🖱️ Clic en 'Enviar' ")
+    print("🖱️ Clic en 'Enviar'")
 
     try:
         WebDriverWait(driver,5).until(EC.presence_of_element_located((By.XPATH,"//h1[normalize-space()='¡Hola! Lamentamos la interrupción.']")))
@@ -173,11 +154,7 @@ def clic_enviar_mensaje(driver, wait):
 
 def main():
     
-    tipo = 0 #--> momentaneo para enviar facturas a los clientes
-    #ids_compania = [23,26,5,29,31,15,32,2,35,38,1,18,27,24,4,36,17,33,39,16,25,11,12,13,14]
-    # A un futuro traes todas las compañias que nos generen cuotas para enviar facturas
     ids_compania = [i for i in range(1, 39) if i != 37]
-    json_vacio = {}
 
     while True:
 
@@ -185,10 +162,9 @@ def main():
 
         if data_facturas_por_enviar:
             nom_car_pri= f"Facturas_Enviadas_{get_dia()}_{get_mes()}"
-            ruta_salida_facturas, log_path = crearCarpetas(json_vacio, nom_car_pri, tipo, cia_a_verificar=None)
+            ruta_salida_facturas = crearCarpetas(nom_car_pri, tipo=0, cia_a_verificar=None)
 
-            df_final = pd.concat(data_facturas_por_enviar, ignore_index=True)
-            df_final.to_excel(ruta_salida_facturas, index=False)
+            guardarJson(data_facturas_por_enviar,ruta_salida_facturas)
 
             time.sleep(1)
             analizarFacturasparaEnviarCliente(ruta_salida_facturas)
@@ -196,11 +172,7 @@ def main():
      
             if os.path.exists(ruta_salida_facturas):
                 os.remove(ruta_salida_facturas)
-                #print("Archivo .xlsx eliminado correctamente")
-            else:
-                print("⚠️ La carpeta no existe")
 
-        #print("⌛ Esperando 3 segundos antes de revisar nuevamente...\n")
         time.sleep(3)
 
 if __name__ == "__main__":

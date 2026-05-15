@@ -2,12 +2,12 @@
       image: cobranza
       build: .
       env_file:
-        - ${HOST_CREDENCIALES_PATH}
+        - ./Env/produccion.env
       networks:
         - orchestrator_network
       volumes:
         - ./Codigo:/app/Codigo
-        - "${HOST_DOWNLOADS_PATH}:/app/Downloads"
+        - ${USERPROFILE}/Downloads:/app/Downloads
       working_dir: /app/Codigo
       restart: "no"
 
@@ -21,7 +21,7 @@
           - "6080:6080"
         environment:
           - NOVNC_PORT=6080
-          - DISPLAY_NUM=0
+          - DISPLAY_NUM=2
         command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_positiva.conf
 
       rpa_sanitas:
@@ -41,10 +41,6 @@
         container_name: cuotasMapfre
         ports:
           - "6082:6082"
-        volumes:
-          - mapfre_codigo:/codigo_mapfre
-          - ./Codigo:/app/Codigo
-          - "${HOST_DOWNLOADS_PATH}:/app/Downloads"
         environment:
           - NOVNC_PORT=6082
           - DISPLAY_NUM=2
@@ -58,8 +54,6 @@
           - "6083:6083"
         volumes:
           - pacifico_codigo:/codigo
-          - ./Codigo:/app/Codigo
-          - "${HOST_DOWNLOADS_PATH}:/app/Downloads"
         environment:
           - NOVNC_PORT=6083
           - DISPLAY_NUM=3
@@ -120,18 +114,11 @@
           - DISPLAY_NUM=8
         command: supervisord -c /app/Codigo/Supervisord/supervisord_facturas.conf
 
-    volumes:
-      mapfre_codigo:
-       external: true
-      pacifico_codigo:
-       external: true
-      rimac_Web:
-       external: true
-
     networks:
       orchestrator_network:
        external: true
 
+    # docker build --no-cache -t cobranza .
     # docker-compose down  -> para detener y eliminar los contenedores
     # docker-compose up -d -> para iniciar todos los servicios del contenedores en segundo plano
 

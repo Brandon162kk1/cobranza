@@ -1,10 +1,7 @@
 ﻿#-- Imports ---
-import subprocess
 import time
 import os
 import pandas as pd
-import requests
-import socket
 import shutil
 #-- Froms ----
 from selenium.common.exceptions import TimeoutException
@@ -12,29 +9,31 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver import ActionChains
-#from excels.estilosExcel import guardar_excel_con_formato
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
-from GoogleChrome.fecha_y_hora import get_timestamp
 from datetime import datetime
 from selenium.webdriver.support.ui import WebDriverWait
-# from Correo.correo_it import enviarCorreoIT
+from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
+from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
+from GoogleChrome.fecha_y_hora import get_timestamp
+from Apis.Compania.get import codigo_compania
 
-#--------- COMPAÑÍA SANITAS MAPFRE ------
+#--------- Datos------
 ruc_mapfre_salud = '20517182673' # Salud
 ruc_mapfre_pension = '20418896915' #Seguros y Re aseguros
-# Lista de IDs de compañía
 ids_compania = [16,17,18]
-#-------CREDENCIALES SANITAS----------
+#----- Variables de Entorno -------
 login_url_mapfre = os.getenv("url_mapfre")
 username = os.getenv("usernameMapfre")
 password = os.getenv("passwordMapfre")
-nombre = os.getenv("CONT_NAME", socket.gethostname())
-nombre = os.getenv("CONT_NAME")
-#--- NOMBRE SERVICE DNS DOCKER PARA UTILIZAR EN LA API -----
-nom_serv = os.getenv("nom_serv")
+url_api_cod_cot = os.getenv("url_api_cod_map")
+API_KEY = os.getenv("API_KEY_MAPFRE")
+para_venv = os.getenv("para")
+para_lista = para_venv.split(",") if para_venv else []
+copia_venv = os.getenv("copia_cuotas")
+copias_lista = copia_venv.split(",") if copia_venv else []
+
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Mapfre_{get_timestamp()}"
 
@@ -43,36 +42,6 @@ def limpiar(valor):
         return ""
     valor = valor.strip()
     return valor if valor else ""
-
-def click_descarga_factura(driver, destino_factura, boton_descarga,numero_poliza,ruta_carpeta_errores):
-    
-    try:
-
-        driver.execute_script("arguments[0].click();", boton_descarga)
-        print("✅ Se hizo clic con JS en el botón de descarga.")
-
-        print("⌛ Esperando la ventana descarga de Linux Debian...")
-        time.sleep(2)
-
-        subprocess.run(["xdotool", "search", "--name", "Save File", "windowactivate", "windowfocus"])
-        print("💡 Se hizo FOCO en la nueva ventana de dialogo de Linux Debian")
-        time.sleep(2)
-
-        subprocess.run(["xdotool", "type","--delay", "100", destino_factura])
-        print("📄 Se escribió el nombre del archivo")
-
-        time.sleep(2)
-
-        subprocess.run(["xdotool", "key", "Return"])
-        print("🖱️ Se presionó Enter para confirmar la descarga.")
-
-        time.sleep(2)
-        return True
-
-    except Exception as ex:
-        print("❌ Error durante el flujo de descarga:", ex)
-        driver.save_screenshot(f"{ruta_carpeta_errores}/{numero_poliza}_ventanalinux.png")
-        return False
 
 def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores):
 
@@ -221,12 +190,12 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                     for fecha in fecha_habiles_factura:
                         print("---------------------------------------")
-                        print(f"⌛ Probando con la Fecha hábil: {fecha}")
+                        #print(f"⌛ Probando con la Fecha hábil: {fecha}")
 
                         #------------INGRESA A SUNAT-------  
                         nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
                         ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                        resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,ruc_cliente_birlik,numero_factura,fecha,importe_fila,ruta_imagen_sunat)
+                        resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,ruc_cliente_birlik,numero_factura,fecha,importe_fila,ruta_imagen_sunat,ruta_carpeta_errores)
 
                         driver.switch_to.window(ventana_principal_mapfre)
                         print("🔄 Volviendo a la ventana de la CIA")
@@ -332,21 +301,13 @@ def main():
 
             ingresar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Ingresar')]")))
             ingresar_btn.click()
-            print("🖱️ Clic en 'Ingresar'.")
+            print("🖱️ Clic en 'Ingresar'")
 
             elemento = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".card-modality__item--left")))
             elemento.click()
-            print("🖱️ Clic en enviar por Correo Electronico.")
+            print("🖱️ Clic en enviar por Correo Electronico")
 
-            codigo_mapfre_path = "/codigo_mapfre/codigo.txt"
-
-            while not os.path.exists(codigo_mapfre_path):
-                time.sleep(2)
-
-            with open(codigo_mapfre_path, "r") as f:
-                codigo = f.read().strip()
-
-            print(f"✅ Código recibido desde volumen: {codigo}")
+            codigo = codigo_compania(url_api_cod_cot,API_KEY)
 
             inputs = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "input.g-input-codes__code")))
 
@@ -359,43 +320,40 @@ def main():
 
             time.sleep(1)
 
-            try:
-                comprobar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Comprobar')]")))
-                comprobar_btn.click()
-                print("🖱️ Clic en 'Comprobar'")
-            except Exception as e:
-                raise Exception(f"No se pudo hacer clic en Comprobar -> {e}")
-
-            # --- Eliminar el archivo después de usarlo ---
-            try:
-                os.remove(codigo_mapfre_path)
-                print("🧹 Archivo codigo.txt eliminado desde volumen")
-            except FileNotFoundError:
-                print("⚠️ No se encontró codigo.txt al intentar eliminarlo (ya fue borrado)")
-            except Exception as e:
-                print(f"❌ Error al eliminar codigo.txt: {e}")
+            comprobar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Comprobar')]")))
+            comprobar_btn.click()
+            print("🖱️ Clic en 'Comprobar'")
 
             try:
-        
-                # Esperar a que aparezca el texto del modal
-                mensaje_elemento = WebDriverWait(driver,10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "div.c-modal p.txt")))
-                mensaje = mensaje_elemento.text.strip()
-                print(f"⚠️ Modal detectado: {mensaje}")
 
-                # enviarCorreoIT(["brandon162001@gmail.com"], [], "Urgente: Cambio de contraseña en Mapfre", mensaje, None, None)
+                modal_mensaje = (By.CSS_SELECTOR, "div.c-modal p.txt")
+                boton_ok_locator = (By.XPATH, "//button[.//span[contains(text(), 'Ok')]]")
 
-                boton = wait.until(EC.presence_of_element_located((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))
+                resultado = wait.until(
+                    EC.any_of(
+                        EC.visibility_of_element_located(modal_mensaje),
+                        EC.element_to_be_clickable(boton_ok_locator)
+                    )
+                )
 
-                driver.execute_script("arguments[0].click();", boton)
-                print("✅ Modal cerrado correctamente")
+                # --- Caso 1: apareció modal con mensaje ---
+                if resultado.tag_name.lower() == "p":
 
-            except TimeoutException:
-                pass
+                    mensaje = resultado.text.strip()
+                    print(f"⚠️ Modal detectado: {mensaje}")
 
-            try:
-                boton_ok = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(), 'Ok')]]")))
-                boton_ok.click()
-                print("🖱️ Clic en 'Ok'")
+                    # if not enviarAviso(para_lista, copias_lista, "Mapfre"):
+                    #     raise Exception("No se pudo enviar el correo")
+
+                    boton_cerrar = wait.until( EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))
+                    driver.execute_script("arguments[0].click();", boton_cerrar)
+                    print("✅ Modal cerrado correctamente")
+
+                # --- Caso 2: apareció botón Ok ---
+                else:
+                    resultado.click()
+                    print("🖱️ Clic en 'Ok'")
+
             except TimeoutException:
                 pass
 
@@ -429,7 +387,7 @@ def main():
                     try:
                         df = pd.read_excel(ruta_salida_API, engine="openpyxl",dtype={"numeroDocumento": str})
                     except Exception as e:
-                        raise Exception(f" Error al leer el archivo Excel: {e}")
+                        raise Exception(f" Error al leer el archivo Excel | Motivo: {e}")
 
                     df["Importe"] = ""
                     df["Sunat"] = ""
@@ -453,32 +411,29 @@ def main():
                             df.at[index, "Estado"] = estado_estado
                             df.at[index, "Acción"] = accion_estado
 
-                            print(f"✅ Fila {index} guardada correctamente.")
+                            print(f"\n✅ Fila {index} guardada correctamente")
                         except Exception as e:
                             print(f"❌ Error en fila {index}, Motivo: {e}")
                         finally:
                             df.to_excel(ruta_salida, index=False)
 
                 except Exception as e:
-                    print(f"\n🟡 Proceso Detenido, por :{e}")
+                    print(f"❌ Proceso Detenido, por : {e}")
                 finally:
-                    #release_lock()
                     if json_cuotas:
                         os.remove(ruta_salida_API)
-                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos.")
+                        print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
                         time.sleep(10)
 
         except Exception as e:
-            print(f"\n🟡 Proceso Detenido por fuerza Mayor, Motivo: {e}")
+            print(f"❌ Proceso Detenido por fuerza Mayor, Motivo: {e}")
 
             if os.path.exists(carpeta_principal):
                 shutil.rmtree(carpeta_compañia)
-                print("🧹 Carpeta eliminada correctamente")
-            else:
-                print("⚠️ La carpeta no existe")
+                #print("🧹 Carpeta eliminada correctamente")
 
             print("⌛ Esperando 30 minutos para intentar reiniciar el proceso")
-            time.sleep(1800) #---> Espera 30 min de forma manual 
+            time.sleep(1800)
             
 if __name__ == "__main__":
     main()

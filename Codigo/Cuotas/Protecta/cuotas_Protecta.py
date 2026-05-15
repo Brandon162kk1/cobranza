@@ -13,17 +13,17 @@ from selenium.webdriver.common.keys import Keys
 from datetime import datetime
 from selenium.webdriver.support.ui import WebDriverWait
 from Sunat.validar_factura import consultarValidezSunat,login_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.api_birlik import consultarAPI
+from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Apis.Birlik.metodo import consultarAPI
 from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
-from Cuotas.Positiva.cuotas_Positiva import mover_y_hacer_click_simple, escribir_lento
-from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_actual
-from Correo.correo_it import enviarCaptcha
+from Cuotas.Positiva.cuotas_Positiva import mover_y_hacer_click_simple,escribir_lento
+from Correo.armar_asunto import enviarCaptcha
 from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,desbloquear_interaccion,bloquear_interaccion,guardarJson
-#------------ PROTECTA ----------------
+#------------ Datos ----------------
 ruc_protecta_vly = '20517207331'
 ids_compania = [25]
-# -- Credenciales Protecta Vida Ley ---
+#----- Variables de Entorno -------
 url_protecta = os.getenv("url_protecta")
 username_protecta = os.getenv("username_protecta")
 password_protecta = os.getenv("password_protecta")
@@ -33,8 +33,6 @@ copia_venv = os.getenv("copia_cuotas")
 copias_lista = copia_venv.split(",") if copia_venv else []
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Protecta_VidaLey"
-# --- Configuración de 2captcha ---
-API_KEY = "8b61feec172173ef48060a723af1b6c7"
 
 #------- Errores comunes de 2Captcha
 # ERROR_WRONG_USER_KEY → API key incorrecta.
@@ -279,7 +277,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                             nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
                             ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
 
-                            resultado = consultarValidezSunat(driver,wait,ruc_protecta_vly,tipo_doc_birlik,ruc_cliente_birlik,serie_numero,fecha,monto,ruta_imagen_sunat)
+                            resultado = consultarValidezSunat(driver,wait,ruc_protecta_vly,tipo_doc_birlik,ruc_cliente_birlik,serie_numero,fecha,monto,ruta_imagen_sunat,ruta_carpeta_errores)
 
                             driver.switch_to.window(ventana_principal_protecta)
                             print("🔄 Volviendo a la ventana de la CIA")
