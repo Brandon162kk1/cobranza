@@ -1,6 +1,8 @@
 ﻿    x-rpa-base: &rpa-base
-      image: cobranza
-      build: .
+      image: cobranza-selenium
+      build:
+        context: .
+        dockerfile: Docker/Selenium/Dockerfile
       env_file:
         - ./Env/produccion.env
       networks:
@@ -8,8 +10,21 @@
       volumes:
         - ./Codigo:/app/Codigo
         - ${USERPROFILE}/Downloads:/app/Downloads
-      working_dir: /app/Codigo
+      #working_dir: /app/Codigo
       restart: "no"
+
+    x-api-base-prod: &api-base-prod
+      build:
+        context: .
+        dockerfile: Docker/Playwright/Dockerfile
+      image: api_playwright
+      env_file:
+        - ./env/produccion.env
+      restart: always
+      volumes:
+        - .:/app
+      networks:
+        - orchestrator_network
 
     services:
     
@@ -21,8 +36,8 @@
           - "6080:6080"
         environment:
           - NOVNC_PORT=6080
-          - DISPLAY_NUM=2
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_positiva.conf
+          - DISPLAY_NUM=0
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_positiva.conf
 
       rpa_sanitas:
         profiles: ["sanitas"]
@@ -33,7 +48,7 @@
         environment:
           - NOVNC_PORT=6081
           - DISPLAY_NUM=1
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_sanitas.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_sanitas.conf
 
       rpa_mapfre:
         profiles: ["mapfre"]
@@ -44,7 +59,7 @@
         environment:
           - NOVNC_PORT=6082
           - DISPLAY_NUM=2
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_mapfre.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_mapfre.conf
 
       rpa_pacifico:
         profiles: ["pacifico"]
@@ -57,7 +72,7 @@
         environment:
           - NOVNC_PORT=6083
           - DISPLAY_NUM=3
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_pacifico.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_pacifico.conf
 
       rpa_qualitas:
         profiles: ["qualitas"]
@@ -68,7 +83,7 @@
         environment:
           - NOVNC_PORT=6084
           - DISPLAY_NUM=4
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_qualitas.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_qualitas.conf
 
       rpa_rimac:
         profiles: ["rimac"]
@@ -79,7 +94,7 @@
         environment:
           - NOVNC_PORT=6085
           - DISPLAY_NUM=5
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_rimac.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_rimac.conf
 
       rpa_crecer:
         profiles: ["crecer"]
@@ -90,7 +105,7 @@
         environment:
           - NOVNC_PORT=6086
           - DISPLAY_NUM=6
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_crecer.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_crecer.conf
 
       rpa_protecta:
         profiles: ["protecta"]
@@ -101,7 +116,7 @@
         environment:
           - NOVNC_PORT=6087
           - DISPLAY_NUM=7
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_protecta.conf
+        command: supervisord -c /app/Supervisord/supervisord_cuotas_protecta.conf
 
       rpa_facturas:
         profiles: ["factura"]
@@ -112,19 +127,29 @@
         environment:
           - NOVNC_PORT=6088
           - DISPLAY_NUM=8
-        command: supervisord -c /app/Codigo/Supervisord/supervisord_facturas.conf
+        command: supervisord -c /app/Supervisord/supervisord_facturas.conf
+
+      api_sunat:
+          <<: *api-base-prod
+          profiles: ["api_sunat"]
+          container_name: api_sunat
+          ports:
+            - "8000:8000"
+          command: uvicorn Codigo.Sunat.api_sunat:app --host 0.0.0.0 --port 8000
 
     networks:
       orchestrator_network:
        external: true
 
-    # docker build --no-cache -t cobranza .
+    # Construir Imagenes: 
+    # docker build -f Docker/Base/Dockerfile --no-cache -t docker-base .
+    # docker build -f Docker/Selenium/Dockerfile --no-cache -t selenium-base .
+    # docker build -f Docker/Playwright/Dockerfile --no-cache -t playwright-base .
+
     # docker-compose down  -> para detener y eliminar los contenedores
     # docker-compose up -d -> para iniciar todos los servicios del contenedores en segundo plano
-
     # docker compose --profile sanitas up -d -> Levantar solo el servicio a traves de un filtro
 
-    #----------------------
     # DEV:
     # rama dev hace cambios y sube al main
     #     add → commit → push 
@@ -140,3 +165,6 @@
     # git pull origin dev
     # git merge origin/dev
     # git push origin main
+
+    # En desarollo seguir usando volumes - ./Codigo:/app/Codigo y NO haces COPY Codigo. en el dockerfile
+    # En produccion Quitar el volume y agregar: COPY Codigo /app/Codigo

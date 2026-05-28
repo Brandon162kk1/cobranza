@@ -14,7 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime, timedelta
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Birlik.urls import url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
 from Apis.Birlik.metodo import consultarAPI
@@ -316,7 +316,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas, ruta_carpeta_comprobant
                                    print("🔄 Volviendo a la ventana de la CIA")
 
                                    if resultado is None:
-                                        resultado_accion = f'=HYPERLINK("{login_sunat}", "Sunat Bloqueado")'
+                                        resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
                                         break
                                    elif resultado:
 
@@ -339,7 +339,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas, ruta_carpeta_comprobant
                                        break   #(*)
 
                                    else:
-                                       resultado_accion = f'=HYPERLINK("{login_sunat}", "Ver Sunat")'
+                                       resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
                                        continue
 
                        finally:
@@ -766,7 +766,7 @@ def main():
     driver.execute_script("arguments[0].click();", sms_option)
     print("🖱️ Clic en 'Enviar un mensaje de texto'.")
 
-    codigo_path = "/codigo/codigo.txt"
+    codigo_path = "/codigo/txt"
 
     print("⏳ Esperando código...")
     while not os.path.exists(codigo_path):
@@ -786,9 +786,9 @@ def main():
     try:
         os.remove(codigo_path)
     except FileNotFoundError:
-        print("⚠️ No se encontró codigo.txt al intentar eliminarlo (ya fue borrado).")
+        print("⚠️ No se encontró txt al intentar eliminarlo (ya fue borrado).")
     except Exception as e:
-        print(f"❌ Error al eliminar codigo.txt: {e}")
+        print(f"❌ Error al eliminar txt: {e}")
 
     ingresar_btn = wait.until(EC.element_to_be_clickable((By.ID, "idSubmit_SAOTCC_Continue")))
     ingresar_btn.click()

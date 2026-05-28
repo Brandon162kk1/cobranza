@@ -5,8 +5,8 @@ from selenium.webdriver.support.ui import Select
 from GoogleChrome.chromeDriver import tomar_captura
 import os
 
-#-----------SUNAT-----------------
-login_sunat = 'https://e-consulta.sunat.gob.pe/ol-ti-itconsvalicpe/ConsValiCpe.htm'
+#----- Variables de Entorno -------
+url_sunat = os.getenv("url_factura")
 
 def es_pagina_bloqueada(html: str) -> bool:
     return (
@@ -21,7 +21,7 @@ def consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,ruc_cliente,c
     driver.execute_script("window.open('');")
     driver.switch_to.window(driver.window_handles[-1])
     
-    driver.get(login_sunat)
+    driver.get(url_sunat)
 
     print(f"⌛ Ingresando a SUNAT para probar con la fecha '{fecha_emision}'")
 

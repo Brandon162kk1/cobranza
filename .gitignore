@@ -1,4 +1,4 @@
-# -------- IDEs --------
+# ---IDEs ---
 .vscode/
 .idea/
 .vs/
@@ -6,30 +6,32 @@
 *.suo
 *.user
 
-# -------- Python --------
+# --- Python ---
 __pycache__/
 *.pyc
 *.pyo
 
-# -------- Variables de entorno / secretos --------
+# --- Variables de entorno / secretos ---
 .env
 *.env
 config.json
 
-# -------- Logs --------
+# --- Logs ---
 *.log
 
-# -------- Archivos de datos --------
+# --- Archivos de datos ---
 *.xlsx
 *.pdf
 
-# -------- Archivos generados --------
+# --- Archivos generados ---
 Downloads/
 
-# -------- Docker --------
+# --- Docker ---
 pacifico_codigo/
 *.pid
 
 # --- Carpetas y files ---
 VerificarCuotas/
-Sunat/consultar_ruc.py
+
+# --- Supervisord ---
+Supervisord/supervisord_vf_cuotas.conf

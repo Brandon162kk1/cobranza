@@ -37,7 +37,7 @@ def abrirDriver(ruta_descargas):
     #-----Configuración de Chrome para Selenium -----
     chrome_options = webdriver.ChromeOptions()
     #chrome_options.add_argument("--incognito")
-    #chrome_options.add_argument("--headless=new")        
+    #chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument('--no-sandbox')    
     chrome_options.add_argument('--disable-popup-blocking') 

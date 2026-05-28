@@ -14,8 +14,8 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import Select
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from cuotas_Crecer import buscaryRegistrarenCrecer,obtener_fecha_emision
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Cuotas.Sanitas.cuotas_Crecer import buscaryRegistrarenCrecer,obtener_fecha_emision
+from Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Apis.Birlik.metodo import consultarAPI
@@ -365,7 +365,7 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
                                 print("🔄 Volviendo a la ventana de la CIA")
 
                                 if resultado is None:
-                                    resultado_accion = f'=HYPERLINK("{login_sunat}", "Sunat Bloqueado")'
+                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
                                     break
                                 elif resultado:
 
@@ -384,7 +384,7 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
                                     break  # Salir del bucle porque ya funcionó con esa fecha
 
                                 else:
-                                    resultado_accion = f'=HYPERLINK("{login_sunat}", "Ver Sunat")'
+                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
                                     continue # Si no es True, salta al siguiente intento
 
                         except Exception as ex:

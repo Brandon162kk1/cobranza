@@ -11,7 +11,7 @@ import urllib.parse as urlparse
 #-- Froms ----
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Apis.Birlik.metodo import consultarAPI

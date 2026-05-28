@@ -14,7 +14,7 @@ from selenium.webdriver.support.ui import Select
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from selenium.webdriver import ActionChains
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Birlik.urls import url_cuotas_canceladas
 from GoogleChrome.fecha_y_hora import get_fecha_hoy
@@ -231,7 +231,7 @@ def buscaryRegistrarenCrecer(driver,wait,fecha_emision_valor,comprobante_valor,i
                             print("🔄 Volviendo a la ventana de la CIA")
 
                             if resultado is None:
-                                resultado_accion = f'=HYPERLINK("{login_sunat}", "Sunat Bloqueado")'
+                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
                                 break
                             elif resultado:
 
@@ -250,7 +250,7 @@ def buscaryRegistrarenCrecer(driver,wait,fecha_emision_valor,comprobante_valor,i
                                 break  # Salir del bucle porque ya funcionó con esa fecha
 
                             else:
-                                resultado_accion = f'=HYPERLINK("{login_sunat}", "Ver Sunat")'
+                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
                                 continue # Si no es True, salta al siguiente intento
 
                     except Exception as ex:

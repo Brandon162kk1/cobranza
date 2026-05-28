@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from Birlik.urls import url_cuotas_canceladas,url_datos_para_enviar_factura
 from Birlik.cancelar_cuotas import iniciar_sesion_birlik
 from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import crearCarpetas,abrirDriver,ruta_carpeta_downloads,guardarJson
+from GoogleChrome.chromeDriver import crearCarpetas,abrirDriver,ruta_carpeta_descargas,guardarJson
 from GoogleChrome.fecha_y_hora import get_dia,get_mes,get_anio
 
 def analizarFacturasparaEnviarCliente(ruta_maestro_evaluar):
@@ -46,7 +46,7 @@ def analizarFacturasparaEnviarCliente(ruta_maestro_evaluar):
 
         print(f"--- Enviando Facturas el {get_dia()}-{get_mes()}-{get_anio()} ---")
 
-        driver, wait = abrirDriver(ruta_carpeta_downloads)
+        driver, wait = abrirDriver(ruta_carpeta_descargas)
 
         try:
             enviarFacturasCliente(driver, wait, lista_cuotas)

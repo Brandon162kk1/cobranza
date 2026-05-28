@@ -1,5 +1,5 @@
 ﻿#-- Imports --
-from Apis.Webhook.post import enviarCorreoGeneral
+from Codigo.Apis.Webhook.post import enviarCorreoGeneral
 
 def enviarCaptcha(para, copia, puerto, cia):
 

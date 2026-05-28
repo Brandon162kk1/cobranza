@@ -5,7 +5,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import Select
-from Sunat.validar_factura import consultarValidezSunat,login_sunat
+from Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Birlik.cancelar_cuotas import cancelar_y_agregar_cuota, agregar_comprobante_pago
 from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Apis.Birlik.metodo import consultarAPI
@@ -267,7 +267,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                                                 print("🔄 Volviendo a la ventana de la CIA")
 
                                                 if resultado is None:
-                                                    resultado_accion = f'=HYPERLINK("{login_sunat}", "Sunat Bloqueado")'
+                                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
                                                     break
                                                 elif resultado:
 
@@ -287,7 +287,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                                                     break
 
                                                 else:
-                                                    resultado_accion = f'=HYPERLINK("{login_sunat}", "Ver Sunat")'
+                                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
                                                     continue
                                             
                                             break
