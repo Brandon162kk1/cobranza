@@ -1,5 +1,4 @@
 ﻿    x-rpa-base: &rpa-base
-      image: cobranza-selenium
       build:
         context: .
         dockerfile: Docker/Selenium/Dockerfile
