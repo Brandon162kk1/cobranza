@@ -17,7 +17,7 @@
       build:
         context: .
         dockerfile: Docker/Playwright/Dockerfile
-      image: api_playwright
+      image: playwright-base .
       env_file:
         - ./env/produccion.env
       restart: always
