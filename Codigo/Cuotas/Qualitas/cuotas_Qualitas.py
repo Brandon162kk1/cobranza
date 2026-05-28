@@ -9,12 +9,12 @@ import pdfplumber
 #-- Froms ----
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
-from GoogleChrome.fecha_y_hora import get_timestamp
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
 from datetime import datetime
 
 #--------- Datos ------

@@ -5,13 +5,13 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import Select
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import cancelar_y_agregar_cuota, agregar_comprobante_pago
-from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos
-from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
-from Cuotas.Positiva.funciones import mover_y_hacer_click_simple, escribir_lento, validar_pagina
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import cancelar_y_agregar_cuota, agregar_comprobante_pago
+from Codigo.Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
+from Codigo.Cuotas.Positiva.funciones import mover_y_hacer_click_simple, escribir_lento, validar_pagina
 #-- Imports --
 import os
 import time

@@ -2,6 +2,7 @@
 FROM chromedriver:stable
 
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 COPY requirements.txt .
 

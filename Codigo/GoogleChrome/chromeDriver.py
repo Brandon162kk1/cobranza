@@ -1,7 +1,7 @@
 ﻿from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
-from GoogleChrome.fecha_y_hora import get_fecha_actual,get_dia,get_mes, get_timestamp
+from Codigo.GoogleChrome.fecha_y_hora import get_fecha_actual,get_dia,get_mes, get_timestamp
 # -- Imports --
 import pandas as pd
 import os

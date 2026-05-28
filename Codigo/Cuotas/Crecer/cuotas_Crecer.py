@@ -11,13 +11,13 @@ from selenium.webdriver.support.ui import WebDriverWait,Select
 from selenium.common.exceptions import TimeoutException
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos,desbloquear_interaccion,bloquear_interaccion
-from GoogleChrome.fecha_y_hora import get_timestamp
-from Correo.armar_asunto import enviarCaptcha
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos,desbloquear_interaccion,bloquear_interaccion
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
+from Codigo.Correo.armar_asunto import enviarCaptcha
 
 #----- Datos ----------------------
 ruc_crecer_vly = '20600098633'

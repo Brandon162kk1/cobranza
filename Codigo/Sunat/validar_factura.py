@@ -2,7 +2,7 @@
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.support.ui import Select
-from GoogleChrome.chromeDriver import tomar_captura
+from Codigo.GoogleChrome.chromeDriver import tomar_captura
 import os
 
 #----- Variables de Entorno -------

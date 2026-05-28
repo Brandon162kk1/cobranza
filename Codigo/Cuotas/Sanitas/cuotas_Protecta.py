@@ -14,13 +14,13 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import Select
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from Cuotas.Sanitas.cuotas_Crecer import buscaryRegistrarenCrecer,obtener_fecha_emision
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,esperar_archivos_nuevos,guardarJson
-from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
+from Codigo.Cuotas.Sanitas.cuotas_Crecer import buscaryRegistrarenCrecer,obtener_fecha_emision
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,esperar_archivos_nuevos,guardarJson
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
 
 #----- Datos -------
 ids_compania = [5,29,31]

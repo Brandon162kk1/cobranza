@@ -14,12 +14,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime, timedelta
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
-from GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas_canceladas,url_detalle_poliza,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
 
 #--------- Datos ------
 ids_compania = [23,33,24]            #-- > 24 es SALUD , 33 es Vida Ley , 23 es PACIFICO GENERAL (PENSION)

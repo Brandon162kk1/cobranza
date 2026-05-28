@@ -14,11 +14,11 @@ from selenium.webdriver.support.ui import Select
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from selenium.webdriver import ActionChains
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas_canceladas
-from GoogleChrome.fecha_y_hora import get_fecha_hoy
-from GoogleChrome.chromeDriver import esperar_archivos_nuevos
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas_canceladas
+from Codigo.GoogleChrome.fecha_y_hora import get_fecha_hoy
+from Codigo.GoogleChrome.chromeDriver import esperar_archivos_nuevos
 
 #----- Variables de Entorno -------
 login_url_sanitas_crecer = os.getenv("login_url_sanitas_crecer")

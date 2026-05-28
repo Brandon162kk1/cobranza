@@ -9,6 +9,7 @@
       volumes:
         - ./Codigo:/app/Codigo
         - ${USERPROFILE}/Downloads:/app/Downloads
+      working_dir: /app
       #working_dir: /app/Codigo
       restart: "no"
 

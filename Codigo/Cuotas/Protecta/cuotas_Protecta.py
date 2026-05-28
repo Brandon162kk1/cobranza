@@ -12,14 +12,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from datetime import datetime
 from selenium.webdriver.support.ui import WebDriverWait
-from Sunat.validar_factura import consultarValidezSunat,url_sunat
-from Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
-from Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
-from Apis.Birlik.metodo import consultarAPI
-from GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
-from Cuotas.Positiva.cuotas_Positiva import mover_y_hacer_click_simple,escribir_lento
-from Correo.armar_asunto import enviarCaptcha
-from GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,desbloquear_interaccion,bloquear_interaccion,guardarJson
+from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
+from Codigo.Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
+from Codigo.Apis.Birlik.metodo import consultarAPI
+from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas
+from Codigo.Cuotas.Positiva.cuotas_Positiva import mover_y_hacer_click_simple,escribir_lento
+from Codigo.Correo.armar_asunto import enviarCaptcha
+from Codigo.GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,desbloquear_interaccion,bloquear_interaccion,guardarJson
 #------------ Datos ----------------
 ruc_protecta_vly = '20517207331'
 ids_compania = [25]
