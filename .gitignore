@@ -32,6 +32,7 @@ pacifico_codigo/
 
 # --- Carpetas y files ---
 VerificarCuotas/
+Migraciones/
 
 # --- Supervisord ---
 Supervisord/supervisord_vf_cuotas.conf
