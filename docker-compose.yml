@@ -8,7 +8,8 @@
       networks:
         - orchestrator_network
       volumes:
-        - ./Codigo:/app/Codigo
+        #- ./Codigo:/app/Codigo
+        - .:/app
         - ${USERPROFILE}/Downloads:/app/Downloads
       working_dir: /app
       restart: "no"
@@ -134,8 +135,24 @@
           profiles: ["api_sunat"]
           container_name: api_sunat
           ports:
-            - "8000:8000"
+            - "8001:8000"
           command: uvicorn Codigo.Sunat.api_sunat:app --host 0.0.0.0 --port 8000
+
+      api_migraciones:
+        <<: *api-base-prod
+        profiles: ["api_migraciones"]
+        container_name: api_migraciones
+        ports:
+        - "8002:8000"
+        command: uvicorn Codigo.Migraciones.api_migraciones:app --host 0.0.0.0 --port 8000
+
+      api_reniec:
+        <<: *api-base-prod
+        profiles: ["api_reniec"]
+        container_name: api_reniec
+        ports:
+        - "8003:8000"
+        command: uvicorn Codigo.Reniec.api_reniec:app --host 0.0.0.0 --port 8000
 
     networks:
       orchestrator_network:
