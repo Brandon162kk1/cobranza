@@ -2,21 +2,34 @@ from fastapi import FastAPI, Header, HTTPException, UploadFile, File, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from playwright.sync_api import sync_playwright
+from Codigo.Sunat.sunat_service import consultar_ruc_service
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
+
 import tempfile
 import pandas as pd
 import os
 
-from Codigo.Sunat.sunat_service import consultar_ruc_service
-from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
+from fastapi.middleware.cors import CORSMiddleware
 
-# ENV
+app = FastAPI(title="API SUNAT RUC", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+#----- Variables de Entorno -------
 API_KEY = os.getenv("API_KEY_SUNAT")
 url_ruc = os.getenv("url_ruc")
 
 if not API_KEY or not url_ruc:
     raise Exception("Variables de entorno no cargadas")
 
-app = FastAPI(title="API SUNAT RUC", version="1.0.0")
 # ---------------- AUTH ----------------
 def auth(x_api_key: str = Header(...)):
     if x_api_key != API_KEY:
@@ -198,5 +211,5 @@ def consultar_excel(file: UploadFile = File(...),auth=Depends(auth)):
 
     return FileResponse(
         output.name,
-        filename=f"Resultado_{get_timestamp()}.xlsx"
+        filename=f"Resultado_RUC_{get_timestamp()}.xlsx"
     )

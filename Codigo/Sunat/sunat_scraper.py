@@ -18,7 +18,6 @@ def open_sunat_page(page: Page, ruc: str):
         raise Exception("SUNAT no respondió")
 
     page.wait_for_selector("#txtRuc", timeout=15000)
-
     campo = page.locator("#txtRuc")
     campo.fill("")
     campo.fill(ruc)
@@ -27,7 +26,7 @@ def open_sunat_page(page: Page, ruc: str):
 
     page.wait_for_selector(
         "xpath=//h4[contains(.,'Número de RUC') or contains(.,'Actividad')]",
-        timeout=30000
+        timeout=60000
     )
 
     return page

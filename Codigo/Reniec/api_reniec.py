@@ -1,20 +1,35 @@
-﻿
-from fastapi import FastAPI, Header, HTTPException, Depends
+﻿from fastapi import FastAPI, Header,UploadFile,File, HTTPException, Depends
 from pydantic import BaseModel
-from playwright.sync_api import sync_playwright, Page
-import os
-import time
+from fastapi.responses import FileResponse
+from playwright.sync_api import sync_playwright
+from Codigo.Reniec.reniec_service import consultar_dni_service
+from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
+from fastapi.middleware.cors import CORSMiddleware
 
+import os,time
+import tempfile
+import pandas as pd
+
+app = FastAPI(title="API RENIEC",version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+#----- Variables de Entorno -------
 API_KEY = os.getenv("API_KEY_RENIEC")
+url_reniec = os.getenv("url_reniec")
+url_reniec_backup = os.getenv("url_reniec_backup")
 url_reniec = os.getenv("url_reniec")
 
 if not API_KEY or not url_reniec:
     raise Exception("Variables de entorno no cargadas")
-
-app = FastAPI(
-    title="API RENIEC",
-    version="1.0.0"
-)
 
 def auth(x_api_key: str = Header(...)):
     if x_api_key != API_KEY:
@@ -23,7 +38,7 @@ def auth(x_api_key: str = Header(...)):
             detail="API Key inválida"
         )
 
-class RucRequest(BaseModel):
+class DniRequest(BaseModel):
     dni: str
 
 def get_page():
@@ -55,42 +70,199 @@ def validar_dni(dni: str):
     dni = dni.strip()
 
     if not dni.isdigit():
-        raise HTTPException(
-            status_code=400,
-            detail="El DNI debe contener solo números"
-        )
+        raise HTTPException(status_code=400,detail="El DNI debe contener solo números")
 
     if len(dni) != 8:
-        raise HTTPException(
-            status_code=400,
-            detail="El DNI debe tener exactamente 8 dígitos"
-        )
+        raise HTTPException(status_code=400,detail="El DNI debe tener exactamente 8 dígitos")
 
     return dni
 
 @app.post("/consultar-dni")
-def consultar(data: RucRequest, auth=Depends(auth)):
+def consultar(data: DniRequest, auth=Depends(auth)):
+
+    playwright = None
+    browser = None
+
+    try:
+        dni = validar_dni(str(data.dni))
+        if not dni:
+            raise HTTPException(status_code=400,detail="DNI inválido")
+        playwright, browser, page = get_page()
+        return consultar_dni_service(page=page,dni=dni)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error al consultar: {str(e)}")
+        raise HTTPException(status_code=500,detail=f"Error interno: {str(e)}")
+    finally:
+        if browser:
+            browser.close()
+        if playwright:
+            playwright.stop()
+
+@app.post("/consultar-dni-excel")
+def consultar_excel(file: UploadFile = File(...),auth=Depends(auth)):
 
     playwright = None
     browser = None
 
     try:
 
-        dni = validar_dni(str(data.dni))
+        temp = tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".xlsx"
+        )
 
-        if not dni:
+        temp.write(file.file.read())
+        temp.close()
+
+        df = pd.read_excel(
+            temp.name,
+            dtype=str
+        )
+
+        df.columns = [c.strip().lower() for c in df.columns]
+
+        COLUMNAS_DNI = [
+            "dni",
+            "numerodocumento",
+            "numero_documento",
+            "numero documento",
+            "nrodocumento",
+            "documento"
+        ]
+
+        columna_dni = next(
+            (col for col in COLUMNAS_DNI if col in df.columns),
+            None
+        )
+
+        if not columna_dni:
             raise HTTPException(
                 status_code=400,
-                detail="DNI inválido"
+                detail="No se encontró una columna válida de DNI/documento"
             )
+
+        columnas = [
+            "nombres",
+            "apellido_paterno",
+            "apellido_materno"
+        ]
+
+        for col in columnas:
+
+            if col not in df.columns:
+                df[col] = ""
+
+        # Nueva columna para errores/observaciones
+        if "observacion" not in df.columns:
+            df["observacion"] = ""
+
+        playwright = None
+        browser = None
 
         playwright, browser, page = get_page()
 
-        return consultar_dni_service(page=page,dni=dni)
+        contador = 0
+
+        for i, row in df.iterrows():
+
+            dni = str(row[columna_dni]).strip()
+
+            if not dni or dni.lower() == "nan":
+                df.at[i, "observacion"] = "DNI vacío"
+                continue
+
+            dni = dni.zfill(8)
+            df.at[i, columna_dni] = dni
+
+            resultado = {}
+
+            try:
+                dni = validar_dni(dni)
+                resultado = consultar_dni_service(page,dni)
+                df.at[i, "observacion"] = "OK"
+            except HTTPException as e:
+                df.at[i, "observacion"] = e.detail
+            except Exception as e:
+                df.at[i, "observacion"] = str(e)
+            finally:
+                contador += 1
+                time.sleep(1)
+
+                if contador >= 10:
+
+                    print("Reiniciando página...")
+                    try:
+                        page.close()
+                    except:
+                        pass
+                    page = browser.new_page()
+                    contador = 0
+
+            for k, v in resultado.items():
+                df.at[i, k] = v
+
+        output = tempfile.NamedTemporaryFile(delete=False,suffix=".xlsx")
+
+        #-------------
+        # Crear nombre completo concatenado
+        df["nombre_completo"] = (
+            df["nombres"].fillna("") + " " +
+            df["apellido_paterno"].fillna("") + " " +
+            df["apellido_materno"].fillna("")
+        ).str.strip()
+
+        # Comparar con cliente
+        df["coincide"] = (
+            (
+                df["cliente"]
+                .fillna("")
+                .str.upper()
+                .str.split()
+                .str.join(" ")
+                ==
+                df["nombre_completo"]
+                .fillna("")
+                .str.upper()
+                .str.split()
+                .str.join(" ")
+            )
+            .map({True: "SI", False: "NO"})
+        )
+
+        df["Actualizar"] = df.apply(
+            lambda row:
+                f"UPDATE CLIENTE SET NombreTipoPersona = '{row['nombre_completo']}' "
+                f"WHERE Id_Cliente = {row['id_cliente']}"
+                if (
+                    row["coincide"] == "NO"
+                    and pd.notna(row["nombre_completo"])
+                    and str(row["nombre_completo"]).strip() != ""
+                )
+                else "",
+            axis=1
+        )
+        #-------------
+
+        df.to_excel(output.name, index=False)
+        return FileResponse(output.name,filename=f"Resultado_DNI_{get_timestamp()}.xlsx")
+
+    except HTTPException:
+        raise
 
     except Exception as e:
-        print(f"Error al consultar: {str(e)}")
-        raise HTTPException(status_code=500,detail=str(e))
+
+        import traceback
+
+        error = traceback.format_exc()
+
+        print(error)
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
     finally:
 
@@ -100,75 +272,133 @@ def consultar(data: RucRequest, auth=Depends(auth)):
         if playwright:
             playwright.stop()
 
-def consultar_dni_service(page, dni: str):
+    # temp = tempfile.NamedTemporaryFile(
+    #     delete=False,
+    #     suffix=".xlsx"
+    # )
 
-    open_reniec_page(page=page,dni=dni)
-    buscar_dni(page, dni)
-    return parse_reniec(page=page,dni=dni)
+    # temp.write(file.file.read())
+    # temp.close()
 
-def open_reniec_page(page: Page, dni: str):
+    # df = pd.read_excel(
+    #     temp.name,
+    #     dtype=str
+    # )
 
-    for intento in range(3):
+    # df.columns = [c.strip().lower() for c in df.columns]
 
-        try:
+    # COLUMNAS_DNI = [
+    #     "dni",
+    #     "numerodocumento",
+    #     "numero_documento",
+    #     "numero documento",
+    #     "nrodocumento",
+    #     "documento"
+    # ]
 
-            page.goto(url_reniec,wait_until="networkidle",timeout=60000)
-            
-            page.wait_for_timeout(2000)
+    # columna_dni = next(
+    #     (col for col in COLUMNAS_DNI if col in df.columns),
+    #     None
+    # )
 
-            page.reload(wait_until="networkidle")
+    # if not columna_dni:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="No se encontró una columna válida de DNI/documento"
+    #     )
 
-            page.wait_for_timeout(2000)
+    # columnas = [
+    #     "nombres",
+    #     "apellido_paterno",
+    #     "apellido_materno"
+    # ]
 
-            break
+    # for col in columnas:
 
-        except Exception as e:
+    #     if col not in df.columns:
+    #         df[col] = ""
 
-            print(f"⚠️ Reintentando Reniec ({intento+1}/3): {e}")
-            time.sleep(3)
+    # # Nueva columna para errores/observaciones
+    # if "observacion" not in df.columns:
+    #     df["observacion"] = ""
 
-    else:
-        raise Exception("Reniec no respondió")
+    # playwright = None
+    # browser = None
 
-    return page
+    # try:
 
-def buscar_dni(page: Page, dni: str):
+    #     playwright, browser, page = get_page()
 
-    # Esperar input visible
-    dni_input = page.locator("#dni")
-    dni_input.wait_for(state="visible", timeout=15000)
+    #     for i, row in df.iterrows():
 
-    # Llenar DNI
-    dni_input.fill(dni)
+    #         dni = str(row[columna_dni]).strip()
 
-    # Click buscar
-    page.get_by_role("button", name="Buscar datos").click()
+    #         if not dni or dni.lower() == "nan":
+    #             df.at[i, "observacion"] = "DNI vacío"
+    #             continue
 
-    # Esperar que cargue la tabla
-    page.wait_for_selector("tbody tr", timeout=15000)
+    #         dni = dni.zfill(8)
+    #         df.at[i, columna_dni] = dni
 
-def parse_reniec(page: Page, dni: str):
+    #         resultado = {}
 
-    page.wait_for_selector("tbody tr", timeout=15000)
+    #         try:
+    #             dni = validar_dni(dni)
+    #             resultado = consultar_dni_service(page,dni)
+    #             df.at[i, "observacion"] = "OK"
+    #         except HTTPException as e:
+    #             df.at[i, "observacion"] = e.detail
+    #         except Exception as e:
+    #             df.at[i, "observacion"] = str(e)
 
-    fila = page.locator("tbody tr").first
+    #         for k, v in resultado.items():
+    #             df.at[i, k] = v
 
-    tds = fila.locator("td")
+    # finally:
 
-    if tds.count() < 4:
-        raise HTTPException(status_code=404,detail="DNI no encontrado")
+    #     if browser:
+    #         browser.close()
 
-    numero = tds.nth(0).inner_text().strip()
-    nombres = tds.nth(1).inner_text().strip()
-    ap_paterno = tds.nth(2).inner_text().strip()
-    ap_materno = tds.nth(3).inner_text().strip()
+    #     if playwright:
+    #         playwright.stop()
 
-    if not numero or not nombres:
-        raise HTTPException(status_code=404,detail="DNI no encontrado")
+    # output = tempfile.NamedTemporaryFile(delete=False,suffix=".xlsx")
 
-    return {
-        "numero_documento": numero,
-        "nombres": nombres,
-        "apellido_paterno": ap_paterno,
-        "apellido_materno": ap_materno
-    }
+    # #-------------
+    # # Crear nombre completo concatenado
+    # df["nombre_completo"] = (
+    #     df["nombres"].fillna("") + " " +
+    #     df["apellido_paterno"].fillna("") + " " +
+    #     df["apellido_materno"].fillna("")
+    # ).str.strip()
+
+    # # Comparar con cliente
+    # df["coincide"] = (
+    #     (
+    #         df["cliente"]
+    #         .fillna("")
+    #         .str.upper()
+    #         .str.split()
+    #         .str.join(" ")
+    #         ==
+    #         df["nombre_completo"]
+    #         .fillna("")
+    #         .str.upper()
+    #         .str.split()
+    #         .str.join(" ")
+    #     )
+    #     .map({True: "SI", False: "NO"})
+    # )
+
+    # df["Actualizar"] = df.apply(
+    #     lambda row:
+    #         f"UPDATE CLIENTE SET NombreTipoPersona = '{row['nombre_completo']}' "
+    #         f"WHERE Id_Cliente = {row['id_cliente']}"
+    #         if row["coincide"] == "NO"
+    #         else "",
+    #     axis=1
+    # )
+    # #-------------
+
+    # df.to_excel(output.name, index=False)
+    # return FileResponse(output.name,filename=f"Resultado_DNI_{get_timestamp()}.xlsx")

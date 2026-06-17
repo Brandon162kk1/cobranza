@@ -51,7 +51,6 @@ def parse_sunat(page: Page, ruc: str):
         razon_social = texto_razon.split(" - ", 1)[1].strip()
         resultado["razon_social"] = razon_social
     
-
     if str(ruc).startswith("10"):
 
         texto_documento = page.locator(

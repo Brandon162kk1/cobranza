@@ -154,6 +154,28 @@
         - "8003:8000"
         command: uvicorn Codigo.Reniec.api_reniec:app --host 0.0.0.0 --port 8000
 
+      frontend:
+          build:
+            context: ./Frontend
+            dockerfile: Dockerfile
+          image: jishu_front-base
+          container_name: jishu_front
+          profiles: ["jishu_service"]
+          ports:
+            - "5173:5173"
+          working_dir: /app
+          env_file:
+            - ./Env/frontend.env
+          volumes:
+            - ./Frontend:/app
+            - /app/node_modules
+          command: npm run dev -- --host 0.0.0.0
+          # depends_on:
+          #   - api_sunat
+          #   - api_reniec
+          networks:
+            - orchestrator_network
+
     networks:
       orchestrator_network:
        external: true
@@ -162,6 +184,7 @@
     # docker build -f Docker/Base/Dockerfile --no-cache -t docker-base .
     # docker build -f Docker/Selenium/Dockerfile --no-cache -t selenium-base .
     # docker build -f Docker/Playwright/Dockerfile --no-cache -t playwright-base .
+    # docker build -t jishu_front-base Frontend
 
     # docker-compose down  -> para detener y eliminar los contenedores
     # docker-compose up -d -> para iniciar todos los servicios del contenedores en segundo plano
