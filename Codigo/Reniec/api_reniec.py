@@ -25,12 +25,11 @@ app.add_middleware(
 #----- Variables de Entorno -------
 API_KEY = os.getenv("API_KEY_RENIEC")
 url_reniec = os.getenv("url_reniec")
-url_reniec_backup = os.getenv("url_reniec_backup")
-url_reniec = os.getenv("url_reniec")
 
 if not API_KEY or not url_reniec:
     raise Exception("Variables de entorno no cargadas")
 
+# ---------------- AUTH ----------------
 def auth(x_api_key: str = Header(...)):
     if x_api_key != API_KEY:
         raise HTTPException(
