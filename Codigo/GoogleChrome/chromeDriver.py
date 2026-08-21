@@ -29,7 +29,6 @@ def abrirDriver(ruta_descargas):
     #-----Configuración de Chrome para Selenium -----
     chrome_options = webdriver.ChromeOptions()
     #chrome_options.add_argument("--incognito")
-    #chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument('--no-sandbox')    
     chrome_options.add_argument('--disable-popup-blocking') 
@@ -53,8 +52,7 @@ def abrirDriver(ruta_descargas):
     try:
         print("\n🟡 Iniciando ChromeDriver con webdriver_manager")
         # Usar el ChromeDriver que ya está instalado en el contenedor
-        service = Service("/usr/local/bin/chromedriver") 
-        #service = Service(ChromeDriverManager().install())
+        service = Service("/usr/local/bin/chromedriver")
         driver = webdriver.Chrome(service=service, options=chrome_options)
         print("🟢 ChromeDriver iniciado correctamente")
 
@@ -68,6 +66,7 @@ def abrirDriver(ruta_descargas):
 
 def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
 
+    # Enviar Facturas
     if tipo == 0 :
 
         # Se crea carpetas dentro de Downloads,Ejemplo --> :/app/Downloads/Facturas_enviadas
@@ -82,8 +81,9 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
         nombre_log = f"EvidenciaFacturasEnviadas_{get_timestamp()}.txt"
         log_path = os.path.join(carpeta_principal, nombre_log)
 
-        return ruta_salida_facturas #, log_path
+        return ruta_salida_facturas
 
+    # Actividades de clientes    
     elif tipo == 5:
 
         # Se crea carpetas dentro de Downloads,Ejemplo --> :/app/Downloads/Actividades_Clientes
@@ -100,6 +100,7 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
 
         return ruta_salida_facturas , log_path ,carpeta_principal
 
+    # Verificación de Cuotas
     elif tipo == 3:
 
         # Se crea carpetas dentro de Downloads,Ejemplo --> :/app/Downloads/Verificacion_Cuotas_dia_mes
@@ -117,6 +118,7 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
 
         return ruta_sub_carpeta , log_path
 
+    # Cuotas Vencidas
     elif tipo == 1:
 
         carpeta_principal = os.path.join(ruta_carpeta_descargas, nombre_carpeta_compañia)
@@ -133,8 +135,6 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
         return carpeta_principal,ruta_salida_cobranzas , log_path
 
     else:
-
-        #--- Esto solo se crea para cuando se cancela las cuotas
 
         #------ Carpeta Principal -------
         nom_carp_principal= f"Reporte_Cuotas_Diarias_{get_fecha_actual()}" #_{timestamp}
@@ -184,21 +184,12 @@ def crearCarpetas(nombre_carpeta_compañia,tipo,cia_a_verificar):
         nombre_API = f"Cuotas_API_{get_dia()}_{get_mes()}.xlsx"
         ruta_API = os.path.join(subcarpeta_excel, nombre_API)
 
-        #salida_reporte_final= 'Reporte_Final_Cuotas.xlsx'
-        #ruta_maestro = os.path.join(carpeta_principal, salida_reporte_final) #--> :/app/Downloads/Reporte_Cuotas_Diarias_2025-07-21/Reporte_Final_Cuotas.xlsx
-
-        # --- Armando el nombre del log con la MISMA base que el Excel ---
-        #nombre_log = nombre_salida.replace(".xlsx", ".txt")
-        #log_path = os.path.join(carpeta_compañia, nombre_log)
-
-        #return log_path,ruta_salida_API,ruta_salida,ruta_maestro,nombre_carpeta_compañia, ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carpeta_errores,carpeta_compañia,carpeta_principal
         return ruta_API,ruta_resultado,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,carpeta_compañia,carpeta_principal
 
 def guardarJson(json,ruta):
 
     df_final = pd.concat(json, ignore_index=True)
     df_final.to_excel(ruta, index=False)
-    #print(f"✅ Datos del API guardados en: {ruta}")s
 
 def esperar_archivos_nuevos(directorio, archivos_antes, extension, cantidad, timeout=60):
     """

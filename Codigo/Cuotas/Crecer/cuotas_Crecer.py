@@ -27,10 +27,9 @@ login_url_crecer_vida_ley = os.getenv("login_url_crecer_vida_ley")
 puerto = os.getenv("NOVNC_PORT")
 username_crecer = os.getenv("username_crecer")
 password_crecer = os.getenv("password_crecer")
-para_venv = os.getenv("para_todo")
-para_lista = para_venv.split(",") if para_venv else []
-copia_venv = os.getenv("copia_todo")
-copias_lista = copia_venv.split(",") if copia_venv else []
+
+copia = os.getenv("copia")
+copias_lista = copia.split(",") if copia else []
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Crecer_VidaLey_{get_timestamp()}"
 
@@ -84,7 +83,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
         time.sleep(3)
 
-        body = driver.find_element(By.TAG_NAME, "body")
+        body = wait.until(EC.element_to_be_clickable((By.TAG_NAME, "body")))
         ActionChains(driver).move_to_element(body).click().perform()
         print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción")
 
@@ -113,7 +112,6 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
         #time.sleep(5)
         wait.until(EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner")))
 
-        #body = driver.find_element(By.TAG_NAME, "body")
         body = wait.until(EC.element_to_be_clickable((By.TAG_NAME, "body")))
         ActionChains(driver).move_to_element(body).click().perform()
         print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción")
@@ -258,7 +256,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                             raise Exception(f"No se descargo la Factuta '{comprobante}'")
 
                 else:
-                    print(f"⚠️ La Poliza {numero_poliza_birlik} tiene estado de Pago '{estado_pago}',estado de emision '{estado_emision}', y estado de compañia '{estado_compania}'")
+                    print(f"⚠️ La Poliza {numero_poliza_birlik} tiene estado de Pago '{estado_pago}', estado de emision '{estado_emision}', y estado de compañia '{estado_compania}'")
                     resultado_accion  = "Esperar a que pague"
                     break
 
@@ -300,10 +298,8 @@ def main():
             pass_input.send_keys(password_crecer)
             print("⌨️ Digitando el Password")
    
-            try:
-                enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley")
-            except Exception as e:
-                raise Exception(f"Error enviando el correo")
+            if not enviarCaptcha(copias_lista,puerto,"Crecer Vida Ley"):
+                raise Exception("No se pudo enviar el correo para resolver captcha")
 
             try:
                 desbloquear_interaccion()

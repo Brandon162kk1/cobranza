@@ -28,10 +28,9 @@ username = os.getenv("usernameMapfre")
 password = os.getenv("passwordMapfre")
 url_api_cod_cot = os.getenv("url_api_cod_map")
 API_KEY = os.getenv("API_KEY_MAPFRE")
-para_venv = os.getenv("para")
-para_lista = para_venv.split(",") if para_venv else []
-copia_venv = os.getenv("copia_cuotas")
-copias_lista = copia_venv.split(",") if copia_venv else []
+
+copia = os.getenv("copia")
+copias_lista = copia.split(",") if copia else []
 
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Mapfre_{get_timestamp()}"
@@ -347,7 +346,7 @@ def main():
                     mensaje = resultado.text.strip()
                     print(f"⚠️ Modal detectado: {mensaje}")
 
-                    # if not enviarAviso(para_lista, copias_lista, "Mapfre"):
+                    # if not enviarAviso(copias_lista, "Mapfre"):
                     #     raise Exception("No se pudo enviar el correo")
 
                     boton_cerrar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))

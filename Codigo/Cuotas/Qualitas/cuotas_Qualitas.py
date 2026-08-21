@@ -35,8 +35,10 @@ def extraer_datos_pdf(ruta_pdf):
             texto += page.extract_text() + "\n"
 
     # Regex exactos según tu PDF
-    regex_fecha = r"Fecha\s+de\s+Emisión\s*:\s*([0-9]{2}-[0-9]{2}-[0-9]{4})"
-    regex_comprobante = r"\b([A-Z]{2}[0-9]{2}-[0-9]{6})\b"
+    regex_fecha = r"Fecha\s+(?:de\s+)?Emisión\s*:\s*(\d{4}-\d{2}-\d{2})"
+    #regex_fecha = r"Fecha\s+de\s+Emisión\s*:\s*([0-9]{2}-[0-9]{2}-[0-9]{4})"
+    regex_comprobante = r"\b([A-Z]{2}\d{2}-\d{5,8})\b"
+    #regex_comprobante = r"\b([A-Z]{2}[0-9]{2}-[0-9]{6})\b"
 
     fecha_match = re.search(regex_fecha, texto)
     comprobante_match = re.search(regex_comprobante, texto)

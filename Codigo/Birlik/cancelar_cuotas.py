@@ -29,7 +29,7 @@ def agregar_comprobante_pago(driver, wait, id_cuota_birlik, ruta_factura):
 
         id_input_comprobante = "customFile_comprobante"
 
-        iniciar_sesion_birlik(driver, wait,id_input_comprobante)
+        iniciar_sesion_birlik(wait,id_input_comprobante)
 
         archivo_comprobante = wait.until(EC.presence_of_element_located((By.ID,id_input_comprobante)))
         archivo_comprobante.send_keys(ruta_factura)
@@ -70,7 +70,7 @@ def cancelar_y_agregar_cuota(driver, wait, id_cuota,comprobante_valor,fecha_emis
         
         id_input_factura = "factura"
 
-        iniciar_sesion_birlik(driver, wait,id_input_factura)
+        iniciar_sesion_birlik(wait,id_input_factura)
 
         factura_input = wait.until(EC.presence_of_element_located((By.ID,id_input_factura)))
         factura_input.clear()
