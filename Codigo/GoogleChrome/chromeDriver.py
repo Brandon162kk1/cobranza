@@ -8,15 +8,7 @@ import os
 import time
 import subprocess
 
-#------ Carpetas de Descargas y Volumen del Docker ----------
-# carpeta_descargas = "Downloads"
-# ruta_carpeta_descargas = f"/app/{carpeta_descargas}"
-
-# # --- Construir ruta de Downloads por defecto ---
-# base_dir = os.path.dirname(os.path.abspath(__file__))
-# ruta_carpeta_downloads = os.path.join(base_dir, "Downloads")
-
-ruta_carpeta_descargas = "/app/Downloads"
+ruta_carpeta_descargas = "/Downloads"
 
 def tomar_captura(driver, ruta_carpeta_errores, nombre_archivo):
 
@@ -26,11 +18,11 @@ def tomar_captura(driver, ruta_carpeta_errores, nombre_archivo):
 
 def bloquear_interaccion():
     subprocess.run(["x11vnc", "-remote", "viewonly"], check=False)
-    print("🔒 Interacción humana BLOQUEADA (VNC view-only)")
+    print("🔒 Interacción humana bloqueada")
 
 def desbloquear_interaccion():
     subprocess.run(["x11vnc", "-remote", "noviewonly"], check=False)
-    print("✋ Interacción humana HABILITADA")
+    print("✋ Interacción humana habilitada")
 
 def abrirDriver(ruta_descargas):
     

@@ -12,7 +12,6 @@ __pycache__/
 *.pyo
 
 # --- Variables de entorno / secretos ---
-.env
 *.env
 config.json
 
@@ -20,19 +19,14 @@ config.json
 *.log
 
 # --- Archivos de datos ---
-*.xlsx
-*.pdf
-
-# --- Archivos generados ---
-Downloads/
+#*.xlsx
+#*.pdf
 
 # --- Docker ---
-pacifico_codigo/
 *.pid
 
 # --- Carpetas y files ---
 VerificarCuotas/
-Migraciones/
 
 # --- Supervisord ---
 Supervisord/supervisord_vf_cuotas.conf

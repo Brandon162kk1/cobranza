@@ -1,10 +1,4 @@
-﻿#-- Imports ---
-import re
-import time
-import os
-import pandas as pd
-import shutil
-#-- Froms ----
+﻿#-- Froms ----
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import invisibility_of_element_located
 from selenium.webdriver.support import expected_conditions as EC
@@ -21,6 +15,12 @@ from Codigo.Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_c
 from Codigo.Apis.Birlik.metodo import consultarAPI
 from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,esperar_archivos_nuevos,guardarJson
 from Codigo.GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
+#-- Imports ---
+import re
+import time
+import os
+import pandas as pd
+import shutil
 
 #----- Datos -------
 ids_compania = [5,29,31]
@@ -185,11 +185,19 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
                     estado_valor = estado
                     resultado_estado = estado_valor     #Le asignamos el valor del estado al Campo Estado
                     comprobante_valor = comprobante
+
+                    detalle_factura = (
+                        f"Factura='{comprobante_valor}'"
+                        if comprobante_valor.strip()
+                        else ""
+                    )
+
                     documento_valor = documento
                     fecha_emision_valor = fecha_emision
                     importe_valor = importe
 
-                    print(f"✅ Fila encontrada: Documento='{documento}', Proforma= '{numero_proforma}', Estado='{estado}', Factura='{comprobante_valor}', Importe ='{importe_valor}', Fecha Emisión ='{fecha_emision_valor}'")
+                    #print(f"✅ Fila encontrada: Documento='{documento}', Proforma= '{numero_proforma}', Estado='{estado}', Factura='{comprobante_valor}', Importe ='{importe_valor}', Fecha Emisión ='{fecha_emision_valor}'")
+                    print(f"✅ Fila encontrada: Documento='{documento}', Proforma= '{numero_proforma}', Estado='{estado}', {detalle_factura}, Importe ='{importe_valor}', Fecha Emisión ='{fecha_emision_valor}'")
                     
                     if estado.lower() == "abonada":
                         #print(f"✅ La cuota con proforma {numero_proforma} está abonada. Comprobante: {comprobante_valor}")
@@ -211,13 +219,14 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
         diferencia = abs(float(importe_valor) - float(importe_total_birlik))
 
         if diferencia > 0.05:
-            print("❌ Los importes No coinciden")
+            print("⚠️ Los importes No coinciden")
         else:
             resultado_importe = True
             print("✅ Los importes Coinciden")
 
         if not fila_encontrada:
-            print(f"❌ No se encontró ninguna fila con Documento conteniendo '{numero_proforma}'")
+            #print(f"❌ No se encontró ninguna fila con Documento conteniendo '{numero_proforma}'")
+            print(f"⚠️ No se encontraron resultados para la proforma '{numero_proforma}'")
         
         # 13. Si la cuota está abonada, navegar a "Consulta de Comprobantes de pago"
         if fila_encontrada and estado_valor.lower() == "abonada":
@@ -323,35 +332,20 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
                             if archivo_nuevo:
                                 print(f"✅ Factura descargado exitosamente")
                                 ruta_original = archivo_nuevo[0]
-                                ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{comprobante_valor}.pdf")
+                                ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{doc_valor}.pdf")
                                 os.rename(ruta_original, ruta_final)
-                                print(f"🔄 Archivo renombrado a '{numero_poliza}_{comprobante_valor}.pdf'")
+                                print(f"🔄 Archivo renombrado a '{numero_poliza}_{doc_valor}.pdf'")
                             else:
                                 raise Exception("No se encontró archivo nuevo después de descargar")
-                            #---------------------------------------------------------
               
                             time.sleep(3)
 
                             fechas_habiles = []
 
-                            #--------
                             fecha_emision_extraida = obtener_fecha_emision(ruta_final)
-                            #--------
 
                             fecha_emision_probar = datetime.strptime(fecha_emision_extraida, "%d/%m/%Y")
                             fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
-
-                            # Hasta tener 15 fechas consecutivas (incluye sábados y domingos)
-                            while len(fechas_habiles) < 15:
-                                fecha_emision_probar += timedelta(days=1)
-
-                                # Si la siguiente fecha es mayor que hoy, se detiene
-                                if fecha_emision_probar.date() >= get_fecha_hoy().date():
-                                    break
-
-                                fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
-
-                            print(f"📅 Fechas de Emisión a probar: {fechas_habiles}")
 
                             for fecha in fechas_habiles:
                                 print("---------------------------------------")
@@ -359,14 +353,15 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
 
                                 nombre_imagen_sunat = f"{numero_proforma}_{numero_poliza}.png"
                                 ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                                resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,comprobante_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
+                                resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,doc_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
 
                                 driver.switch_to.window(ventana_cia)
                                 print("🔄 Volviendo a la ventana de la CIA")
 
                                 if resultado is None:
                                     resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
-                                    break
+                                    #break
+                                    raise Exception("SUNAT bloqueado por firewall")
                                 elif resultado:
 
                                     resultado_sunat = True
@@ -377,7 +372,7 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
                                         resultado_accion = "Factura Enviada Anteriormente"
                                     else:
                                         print("📤 Subiendo todos los documentos a Birlik")
-                                        cancelar_y_agregar_cuota(driver,wait,id_cuota,comprobante_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
+                                        cancelar_y_agregar_cuota(driver,wait,id_cuota,doc_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
                                         resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente}", "Enviar Factura")'
             
                                     resultado_birlik = True
@@ -389,6 +384,61 @@ def procesar_fila(row,ruta_carpeta_facturas, ruta_carpeta_comprobante, ruta_carp
 
                         except Exception as ex:
                             print(f"Error general al intentar interactuar con el menú desplegable, Detalles {ex}")
+
+                        archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
+
+                        if archivo_nuevo:
+                            print(f"✅ Factura descargado exitosamente")
+                            ruta_original = archivo_nuevo[0]
+                            ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{doc_valor}.pdf")
+                            os.rename(ruta_original, ruta_final)
+                            print(f"🔄 Archivo renombrado a '{numero_poliza}_{doc_valor}.pdf'")
+                        else:
+                            raise Exception("No se encontró archivo nuevo después de descargar")
+              
+                        time.sleep(3)
+
+                        fechas_habiles = []
+
+                        fecha_emision_extraida = obtener_fecha_emision(ruta_final)
+
+                        fecha_emision_probar = datetime.strptime(fecha_emision_extraida, "%d/%m/%Y")
+                        fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
+
+                        for fecha in fechas_habiles:
+                            print("---------------------------------------")
+                            #print(f"⌛ Probando con la Fecha hábil: {fecha}")
+
+                            nombre_imagen_sunat = f"{numero_proforma}_{numero_poliza}.png"
+                            ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
+                            resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,doc_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
+
+                            driver.switch_to.window(ventana_cia)
+                            print("🔄 Volviendo a la ventana de la CIA")
+
+                            if resultado is None:
+                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
+                                #break
+                                raise Exception("SUNAT bloqueado por firewall")
+                            elif resultado:
+
+                                resultado_sunat = True
+
+                                if estadoCuota_birlik == "Pendiente-comprobante":
+                                    print("📤 Subiendo comprobante a Birlik")
+                                    agregar_comprobante_pago(driver,wait,id_cuota,ruta_final)
+                                    resultado_accion = "Factura Enviada Anteriormente"
+                                else:
+                                    print("📤 Subiendo todos los documentos a Birlik")
+                                    cancelar_y_agregar_cuota(driver,wait,id_cuota,doc_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
+                                    resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente}", "Enviar Factura")'
+            
+                                resultado_birlik = True
+                                break  # Salir del bucle porque ya funcionó con esa fecha
+
+                            else:
+                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
+                                continue # Si no es True, salta al siguiente intento
     
             if not fila_encontrada_descarga:
                 print("❌ No se encontró la fila con el Documento esperado \n⌛ Consultando en la otra Compañia")

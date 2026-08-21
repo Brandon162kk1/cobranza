@@ -4,9 +4,8 @@ import os
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException,TimeoutException
 from datetime import datetime
-from selenium.common.exceptions import TimeoutException
 from .urls import url_agregar_comprobante
 
 #----- Datos -------
@@ -112,7 +111,7 @@ def cancelar_y_agregar_cuota(driver, wait, id_cuota,comprobante_valor,fecha_emis
 
         btn_registrar = wait.until(EC.element_to_be_clickable((By.ID, "btnRegistrar")))
         btn_registrar.click()
-        print("🖱️ Clic en REGISTRAR")
+        print("🖱️ Clic en registrar")
 
         wait.until(EC.invisibility_of_element_located((By.ID, "btnRegistrar")))
         print("✅ Registro completado")
@@ -147,7 +146,9 @@ def iniciar_sesion_birlik(driver, wait,id_elemento):
         )
     )
 
-    if resultado.get_attribute("id") == "factura":
+    element_id = resultado.get_attribute("id")
+
+    if element_id in ("factura", "customFile_comprobante"):
         print("✅ Sesión ya activa")
         return
 

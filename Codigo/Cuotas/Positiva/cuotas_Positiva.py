@@ -1,5 +1,6 @@
 ﻿#-- Froms --
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,13 +12,11 @@ from Codigo.Birlik.urls import url_cuotas,url_cuotas_canceladas,url_datos_para_c
 from Codigo.Apis.Birlik.metodo import consultarAPI
 from Codigo.GoogleChrome.chromeDriver import abrirDriver,crearCarpetas,guardarJson,esperar_archivos_nuevos
 from Codigo.GoogleChrome.fecha_y_hora import get_timestamp,get_fecha_hoy
-from Codigo.Cuotas.Positiva.funciones import mover_y_hacer_click_simple, escribir_lento, validar_pagina
+from Codigo.Cuotas.Positiva.funciones import mover_y_hacer_click_simple, escribir_lento, validar_pagina,time_espera_alea
 #-- Imports --
 import os
 import time
 import pandas as pd
-import random
-import shutil
 
 #----- Variables de Entorno -------
 url_Positiva = os.getenv("url_Positiva")
@@ -94,7 +93,6 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
     fechas_fin = [fecha_opcion_1_final]
 
     print(f"Cliente con {tipo_doc_birlik} # {num_doc_birlik} ")
-
 
     if ramo_birlik == 55 or ramo_birlik == 56:
         ruc_emisor = '20454073143'
@@ -319,103 +317,165 @@ def main():
       
     while True:
 
-        ruta_salida_API,ruta_salida,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,carpeta_compañia,carpeta_principal = crearCarpetas(nombre_carpeta_compañia,tipo=2,cia_a_verificar=None)
+        login_exitoso = False
+
+        ruta_salida_API,ruta_salida,ruta_carpeta_facturas,ruta_carpeta_comprobante,\
+            ruta_carpeta_errores,carpeta_compañia,carpeta_principal = crearCarpetas(
+                nombre_carpeta_compañia,
+                tipo=2,
+                cia_a_verificar=None
+            )
 
         try:
         
-            display_num = os.getenv("DISPLAY_NUM", "0")
-            os.environ["DISPLAY"] = f":{display_num}"
+            for intento in range(2):
 
-            driver,wait = abrirDriver(ruta_carpeta_facturas)
+                id_usuario = (By.ID, "b5-Input_User")
 
-            driver.get(url_Positiva)
-            print("⌛ Ingresando a la URL")
+                try:
 
-            time.sleep(3)
-            user_field = wait.until(EC.presence_of_element_located((By.ID, "b5-Input_User")))
-            user_field.clear()
+                    print("----------------------------")
+                    print(f"🔄 Intento de login número {intento + 1}")
 
-            mover_y_hacer_click_simple(driver, user_field)
-            time.sleep(random.uniform(0.97, 0.99))
+                    display_num = os.getenv("DISPLAY_NUM", "0")
+                    os.environ["DISPLAY"] = f":{display_num}"
 
-            escribir_lento(user_field, username, min_delay=0.97, max_delay=0.99)
-            print("⌨️ Digitando el Username")
+                    driver,wait = abrirDriver(ruta_carpeta_facturas)
 
-            time.sleep(1 + random.random() * 1.5)
+                    driver.get(url_Positiva)
+                    print("⌛ Cargando la Web de Positiva")
 
-            password_field = wait.until(EC.presence_of_element_located((By.ID, "b5-Input_PassWord")))
-            password_field.clear()
+                    user_field = wait.until(EC.element_to_be_clickable(id_usuario))
+                    user_field.clear()
+                    mover_y_hacer_click_simple(driver, user_field)    
+                    time_espera_alea(2,3)
+                    print(f"⌨️ Digitando el Username {username}")
+                    escribir_lento(user_field, username, min_delay=1.5, max_delay=2)
+                    time_espera_alea(2,3)
 
-            mover_y_hacer_click_simple(driver, password_field)
-            time.sleep(random.uniform(0.97, 0.99))
+                    password_field = wait.until(EC.element_to_be_clickable((By.ID, "b5-Input_PassWord")))
+                    password_field.clear()
+                    mover_y_hacer_click_simple(driver, password_field)         
+                    time_espera_alea(2,3)
+                    print(f"⌨️ Digitando el Password {password}")
+                    escribir_lento(password_field,password, min_delay=1.5, max_delay=2)  
+                    time_espera_alea(2,3)
 
-            escribir_lento(password_field, password, min_delay=0.97, max_delay=0.99)
-            print(f"⌨️ Digitando el Password '{password}'")
+                    login_button = wait.until(EC.element_to_be_clickable((By.ID, "b5-btnAction")))
+                    mover_y_hacer_click_simple(driver, login_button)
+                    print("🖱️ Clic en Iniciar Sesión")
 
-            time.sleep(5)
+                    #--- Opciones---
+                    blocked_account = (By.XPATH, "//span[contains(text(),'Cuenta bloqueada')]") # Cuenta Bloqueada
+                    change_password = (By.ID, "b5-b22-ChangePassword") # Posible Cambio de contraseña
+                    temp_blocked = (By.XPATH, "//span[contains(text(),'Cuenta inhabilitada temporalmente')]")
+                    autogestion_locator = (By.XPATH, "//div[contains(@class,'menu-item')]//span[normalize-space()='Autogestión']/parent::div")
+                    error_screen_locator = (By.ID,"error-screen-message-text")
+                    cod_verificacion = (By.ID, "b5-b17-Input_CodeVerification")
 
-            login_button = wait.until(EC.element_to_be_clickable((By.ID, "b5-btnAction")))
-            mover_y_hacer_click_simple(driver, login_button)
-            print("🖱️ Clic en Inicar Sesión")
+                    def usuario_vacio(driver):
+                        try:
+                            elem = driver.find_element(By.ID, "b5-Input_User")
+                            return elem if elem.get_attribute("value") == "" else False
+                        except:
+                            return False
 
-            try:
+                    try:
 
-                popup_text = WebDriverWait(driver,10).until(EC.visibility_of_element_located((By.XPATH, "//span[contains(text(),'Usuario o contraseña incorrectos')]")))           
-                if popup_text:
-                    print("❌ Usuario o contraseña incorrectos")
-                    aceptar_btn = wait.until(EC.presence_of_element_located((By.XPATH, "//button[.//span[text()='Aceptar']]")))
-                    aceptar_btn.click()
-                    print("🖱️ Clic en Aceptar")
-                    raise Exception("Credenciales Incorrectas, Revisar el Usuario y Contraseña proporcionados")
-            except:
-                pass
+                        resultado0 = wait.until(
+                            EC.any_of(
+                                EC.element_to_be_clickable(autogestion_locator),
+                                EC.visibility_of_element_located(error_screen_locator),
+                                EC.visibility_of_element_located(cod_verificacion),
+                                EC.element_to_be_clickable(change_password),
+                                EC.visibility_of_element_located(blocked_account),
+                                EC.visibility_of_element_located(temp_blocked),
+                                usuario_vacio
+                            )
+                        )
 
-            wait.until(EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'menu-item')]//span[normalize-space()='Autogestión']/parent::div")))
-            autogestion = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[contains(@class,'menu-item')]//span[normalize-space()='Autogestión']/parent::div")))
+                        elemento_id = resultado0.get_attribute("id")
 
-            driver.execute_script("arguments[0].click();", autogestion)
-            print("✅ Login exitoso")
-            print("🖱️ Clic en Autogestión")
+                        if elemento_id == "b5-b22-ChangePassword":
+                            raise Exception("Contraseña expirada, se requiere cambio de contraseña")
 
-            # Despues de Autogestion
-            ov = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='OV']")))
-            ov.click()
-            print("🖱️ Clic en 'OV'")
+                        if elemento_id == "b5-b17-Input_CodeVerification":
+                            raise Exception("Apareció input de código")
 
-            wait.until(lambda d: len(d.window_handles) > 1)
+                        if elemento_id == "error-screen-message-text":
+                            texto_error = resultado0.text.strip()
+                            raise Exception(texto_error)
 
-            driver.switch_to.window(driver.window_handles[-1])
+                        if "Cuenta bloqueada" in resultado0.text:
+                            raise Exception(resultado0.text.strip())
 
-            try:
-                alert = WebDriverWait(driver,5).until(EC.alert_is_present())
-                print(f"⚠️ Alerta presente: {alert.text}")
-                alert.accept()
-                print("✅ Alerta aceptada")
-            except:
-                pass
+                        if "Cuenta inhabilitada temporalmente" in resultado0.text:
+                            raise Exception(resultado0.text.strip())
+
+                        if elemento_id == "b5-Input_User":
+                            raise Exception("Hubo un refresh a la pantalla de inicio")
+
+                        autogestion = wait.until(EC.element_to_be_clickable(autogestion_locator))
+                        print("✅ Login exitoso")
+                        driver.execute_script("arguments[0].click();", autogestion)
+                        login_exitoso = True
+                        print("🖱️ Clic en Autogestión")
+
+                    except TimeoutException:
+                        raise Exception("Problemas en el Inicio de Sesión")
+
+                    ov = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[text()='OV']")))
+                    ov.click()
+                    print("🖱️ Clic en 'OV'")
+
+                    wait.until(lambda d: len(d.window_handles) > 1)
+
+                    driver.switch_to.window(driver.window_handles[-1])
+
+                    try:
+                        alert = WebDriverWait(driver,5).until(EC.alert_is_present())
+                        print(f"⚠️ Alerta presente: {alert.text}")
+                        alert.accept()
+                        print("✅ Alerta aceptada")
+                    except:
+                        pass
                 
-            driver.refresh()
-            time.sleep(5)
-            resultado,asunto = validar_pagina(driver)  
+                    print("--- Se ingresó a Oficina Virtual La Positiva 🌐---")
+                    resultado,asunto = validar_pagina(driver)  
 
-            if not resultado:
-                raise Exception(asunto)
+                    if not resultado:
+                        raise Exception(asunto)
 
-            estados_de_cuenta_img = wait.until(EC.presence_of_element_located((By.ID, f"stUIUserOV31_img")))
-            print("🖱️ Mouse sobre la imagen 'Estado de Cuenta'")
+                    estados_de_cuenta_img = wait.until(EC.presence_of_element_located((By.ID, f"stUIUserOV31_img")))
+                    print("🖱️ Mouse sobre la imagen 'Estado de Cuenta'")
 
-            action = ActionChains(driver)
-            action.move_to_element(estados_de_cuenta_img).perform()
+                    action = ActionChains(driver)
+                    action.move_to_element(estados_de_cuenta_img).perform()
 
-            span_element = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'stsp') and contains(text(), 'Estado') and contains(text(), 'cuenta')]")))
+                    span_element = wait.until(EC.presence_of_element_located((By.XPATH, "//span[contains(@class, 'stsp') and contains(text(), 'Estado') and contains(text(), 'cuenta')]")))
 
-            id_dinamico = span_element.get_attribute("id")
+                    id_dinamico = span_element.get_attribute("id")
 
-            estado_de_cuenta_link = wait.until(EC.element_to_be_clickable((By.ID, id_dinamico)))
-            estado_de_cuenta_link.click()
-            print("🖱️ Clic en 'Estado de Cuenta'")
+                    estado_de_cuenta_link = wait.until(EC.element_to_be_clickable((By.ID, id_dinamico)))
+                    estado_de_cuenta_link.click()
+                    print("🖱️ Clic en 'Estado de Cuenta'")
 
-            time.sleep(3)
+                    time.sleep(3)
+
+                    break
+
+                except Exception as e:
+
+                    print(f"❌ Login falló: {e}")
+
+                    try:
+                        driver.quit()
+                    except:
+                        pass
+
+            # Si agotó los 2 intentos
+            if not login_exitoso:
+                raise Exception("No fue posible iniciar sesión después de 2 intentos")
 
             while True:
 
@@ -465,21 +525,26 @@ def main():
                         time.sleep(2)
 
                 except Exception as e:
-                    print(f"❌ Proceso Detenido, por :{e}")
+
+                    print(f"❌ Proceso detenido | Motivo: {e}")
+
                 finally:
+
                     if json_cuotas:
                         os.remove(ruta_salida_API)
                         print(f"\n✅ Flujo finalizado, Intentando de nuevo en 10 segundos")
                         time.sleep(10)
 
         except Exception as e:
-            print(f"❌ Proceso Detenido por fuerza Mayor | Motivo: {e}")
 
-            if os.path.exists(carpeta_principal):
-                shutil.rmtree(carpeta_compañia)
-                #print("🧹 Carpeta eliminada correctamente")
+            print(f"❌ Proceso detenido | Motivo: {e}")
 
-            print("⌛ Esperando 30 minutos para intentar reiniciar el proceso")
+            try:
+                driver.quit()
+            except:
+                pass
+
+            print("⌛ Esperando 30 minutos para reiniciar")
             time.sleep(1800)
 
 if __name__ == "__main__":

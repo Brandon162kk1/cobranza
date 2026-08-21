@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait,Select
 from selenium.common.exceptions import TimeoutException
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
+from Codigo.Sunat.validar_factura import consultarValidezSunat, tomar_captura,url_sunat
 from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Codigo.Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Codigo.Apis.Birlik.metodo import consultarAPI
@@ -41,7 +41,7 @@ nombre_carpeta_compañia = f"Crecer_VidaLey_{get_timestamp()}"
 # ERROR_WRONG_GOOGLEKEY → El sitekey no corresponde o no es válido.
 # ERROR_PAGEURL → La URL de la página no es válida.
 
-def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores):
+def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,index):
 
     id_cuota_birlik = str(row["id_Cuota"]).strip()
     ruc_cliente_birlik = str(row["numeroDocumento"]).strip()
@@ -55,13 +55,13 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
     # Convertir a objeto datetime
     fecha_inicio_dt = datetime.strptime(vigencia_inicio_birlik, "%d/%m/%Y")
-    fecha_fin_dt = datetime.strptime(vigencia_inicio_birlik,"%d/%m/%Y")
+    #fecha_fin_dt = datetime.strptime(vigencia_inicio_birlik,"%d/%m/%Y")
     # Restar 1 mes
     fecha_menos_un_mes = fecha_inicio_dt - relativedelta(months=1)
-    fecha_mas_un_mes = fecha_fin_dt + relativedelta(months=1)
+    #fecha_mas_un_mes = fecha_fin_dt + relativedelta(months=1)
     # Convertir de nuevo a string si lo necesitas en ese formato
     fecha_resultado_menos = fecha_menos_un_mes.strftime("%d/%m/%Y")
-    fecha_resultado_mas = fecha_mas_un_mes.strftime("%d/%m/%Y")
+    #fecha_resultado_mas = fecha_mas_un_mes.strftime("%d/%m/%Y")
    
     resultado_importe = False
     resultado_sunat = False
@@ -74,11 +74,9 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
         input_fullname = wait.until(EC.visibility_of_element_located((By.ID, "sfullname")))
         input_fullname.clear()
         input_fullname.send_keys(ruc_cliente_birlik)
-        print(f"✅ Se ingresó el RUC '{ruc_cliente_birlik}'.")
+        print(f"✅ Se ingresó el RUC '{ruc_cliente_birlik}'")
 
-        # Quitar el atributo readonly con Javascript
         input_fecha = wait.until(EC.visibility_of_element_located((By.ID, "solicitud_fecha_inicio")))
-        #driver.find_element(By.ID, "solicitud_fecha_inicio")
         driver.execute_script("arguments[0].removeAttribute('readonly')", input_fecha)
         input_fecha.clear()
         input_fecha.send_keys(fecha_resultado_menos)
@@ -86,10 +84,9 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
         time.sleep(3)
 
-        # Hacer click en un lugar vacío de la página (por ejemplo el body)
         body = driver.find_element(By.TAG_NAME, "body")
         ActionChains(driver).move_to_element(body).click().perform()
-        print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción.")
+        print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción")
 
         # # Quitar el atributo readonly con Javascript
         # input_fecha_fin = wait.until(EC.visibility_of_element_located((By.ID, "solicitud_fecha_fin")))
@@ -102,37 +99,30 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
         input_poliza = wait.until(EC.visibility_of_element_located((By.XPATH,"//label[normalize-space()='Póliza']/following-sibling::input")))
         input_poliza.clear()
         input_poliza.send_keys(numero_poliza_birlik)
-        print(f"✅ Se ingresó la Póliza '{numero_poliza_birlik}'.")
+        print(f"✅ Se ingresó la Póliza '{numero_poliza_birlik}'")
 
-        # Esperar que el select esté visible
         select_element = wait.until(EC.visibility_of_element_located((By.ID, "Estados")))
         select = Select(select_element)
         select.select_by_value("0")
-        print("🖱️ Se selecciono la opcion 'Todos' ")
+        print("🖱️ Se selecciono la opcion 'Todos'")
 
-        # Esperar que el botón esté visible y clickable
         boton_consultar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Consultar')]")))
-        # Click en el botón usando JavaScript (más efectivo en Angular/React)
         driver.execute_script("arguments[0].click();", boton_consultar)
         print("🖱️ Clic en Consultar")
 
-        time.sleep(5)
-
-        # Esperar a que el loader desaparezca
+        #time.sleep(5)
         wait.until(EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner")))
 
-        # Hacer click en un lugar vacío de la página (por ejemplo el body)
-        body = driver.find_element(By.TAG_NAME, "body")
+        #body = driver.find_element(By.TAG_NAME, "body")
+        body = wait.until(EC.element_to_be_clickable((By.TAG_NAME, "body")))
         ActionChains(driver).move_to_element(body).click().perform()
-        print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción.")
+        print("🖱️ Clic en un lugar vacío de la página para asegurar la interacción")
 
-        # Seleccionar la opción "20" en el dropdown de cantidad de registros
         select_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "select.select2.form-control.input-sm")))
         Select(select_elem).select_by_value("20")
-        print("✅ Se seleccionó '20' registros para mostrar más filas.")
-        time.sleep(5)
-
-        # Esperar a que el loader desaparezca
+        print("✅ Se seleccionó '20' registros para mostrar más filas")
+        
+        #time.sleep(5)
         wait.until(EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner")))
 
         try:
@@ -142,13 +132,12 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
         except TimeoutException:
             driver.save_screenshot(os.path.join(ruta_carpeta_errores,f"{numero_poliza_birlik}_{get_timestamp()}.png"))
-            raise Exception("❌ La tabla no tiene filas")
+            raise Exception("La tabla no tiene filas")
 
         fila_encontrada = False
 
-        print("-------------------------------------------------")
         num_poliza_mas_reno = f"{numero_poliza_birlik}-R{numero_proforma_birlik}"
-        print(f"🔍 Buscando el código de cuota '{numero_proforma_birlik}' o el numero de poliza '{num_poliza_mas_reno}'.")
+        print(f"🔍 Buscando el código de cuota '{numero_proforma_birlik}' o el numero de poliza '{num_poliza_mas_reno}'")
 
         for row in rows:
 
@@ -176,7 +165,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                 resultado_estado = estado_pago
 
-                print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(prima_total)}")
+                #print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(prima_total)}")
                 if diferencia > 0.05:
                     print("❌ Los importes No coinciden")
                 else:
@@ -188,91 +177,88 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                     if len(cells) > 18:
 
                         comprobante_pdf = cells[17]
+                        link = comprobante_pdf.find_element(By.TAG_NAME, "a")
 
-                        try:
-                            # Hacer clic en el link de esa celda
-                            link = comprobante_pdf.find_element(By.TAG_NAME, "a")
+                        ventana_principal_crecer = driver.current_window_handle
 
-                            ventana_principal_crecer = driver.current_window_handle
+                        archivos_antes = set(os.listdir(ruta_carpeta_facturas))
 
-                            # Guardar archivos antes del clic
-                            archivos_antes = set(os.listdir(ruta_carpeta_facturas))
+                        driver.execute_script("arguments[0].click();", link)
+                        print("🖱️ Clic con JS en el botón de descarga")
 
-                            driver.execute_script("arguments[0].click();", link)
-                            print("✅ Se hizo clic con JS en el botón de descarga")
+                        resultado = wait.until(
+                            EC.any_of(
+                                EC.visibility_of_element_located((By.ID, "swal2-content")),
+                                EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner"))
+                            )
+                        )
 
-                            try:
+                        if resultado is True:
+                            print("✅ Loader desapareció, continuar con la descarga")
+                        else:
+                            texto = resultado.text.strip()
 
-                                mensaje_generando = WebDriverWait(driver,7).until(EC.presence_of_element_located((By.ID, "swal2-content")))
-                                texto = mensaje_generando.text.strip()
+                            if "Estamos generando tu comprobante" in texto:
+                                print(f"⚠️ Mensaje detectado -> '{texto}'")
+                                boton_ok = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class,'swal2-confirm')]")))
+                                boton_ok.click()
+                                print(f"🖱️ Clic en Ok")
+                                #raise Exception(f"Mensaje detectado -> '{texto}'")
+                                resultado_accion  = "Volver a intentar"
+                                break
 
-                                if "Estamos generando tu comprobante" in texto:
+                        archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
 
-                                    # Esperar botón OK y hacer clic
-                                    boton_ok = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class,'swal2-confirm')]")))
-                                    boton_ok.click()
-                                    print("🖱️ Clic en Ok")
+                        if archivo_nuevo:
+                            print(f"✅ Archivo .pdf descargado exitosamente")
+                            ruta_original = archivo_nuevo[0]
+                            ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza_birlik}_{comprobante}.pdf")
+                            os.rename(ruta_original, ruta_final)
+                            print(f"🔄 Archivo renombrado a '{numero_poliza_birlik}_{comprobante}.pdf'")
+                        else:
+                            raise Exception("No se encontró archivo nuevo después de descargar")
 
-                                    raise Exception(f"Mensaje detectado -> '{texto}'")
+                        # # Esperar a que el loader desaparezca
+                        # wait.until(EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner")))
 
-                            except TimeoutException:
-                                pass
+                        if os.path.exists(ruta_final):
+                            #------------INGRESA A SUNAT-------  
+                            nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
+                            ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
+                            resultado = consultarValidezSunat(driver,wait,ruc_crecer_vly,tipo_doc_birlik,ruc_cliente_birlik,comprobante,fecha_emision_comprobante,prima_total,ruta_imagen_sunat,ruta_carpeta_errores)
 
-                            archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
+                            driver.switch_to.window(ventana_principal_crecer)
+                            print("🔄 Volviendo a la ventana de la CIA")
 
-                            if archivo_nuevo:
-                                print(f"✅ Archivo .pdf descargado exitosamente")
-                                ruta_original = archivo_nuevo[0]
-                                ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza_birlik}_{comprobante}.pdf")
-                                os.rename(ruta_original, ruta_final)
-                                print(f"🔄 Archivo renombrado a '{numero_poliza_birlik}_{comprobante}.pdf'")
-                            else:
-                                raise Exception("No se encontró archivo nuevo después de descargar")
-
-                            # Esperar a que el loader desaparezca
-                            wait.until(EC.invisibility_of_element_located((By.XPATH, "//ngx-spinner")))
-
-                            if os.path.exists(ruta_final):
-                                #------------INGRESA A SUNAT-------  
-                                nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
-                                ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                                resultado = consultarValidezSunat(driver,wait,ruc_crecer_vly,tipo_doc_birlik,ruc_cliente_birlik,comprobante,fecha_emision_comprobante,prima_total,ruta_imagen_sunat,ruta_carpeta_errores)
-
-                                driver.switch_to.window(ventana_principal_crecer)
-                                print("🔄 Volviendo a la ventana de la CIA")
-
-                                if resultado is None:
-                                        resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
-                                        break
-                                elif resultado:
-
-                                    resultado_sunat = True
-
-                                    if estado_Cuota_birlik == "Pendiente-comprobante":
-
-                                        print("📤 Subiendo comprobante a Birlik...")
-                                        agregar_comprobante_pago(driver,wait,id_cuota_birlik,ruta_final)
-                                        resultado_accion = "Factura Enviada Anteriormente"
-
-                                    else:
-
-                                        print("📤 Subiendo todos los documentos a Birlik...")
-                                        cancelar_y_agregar_cuota(driver,wait,id_cuota_birlik,comprobante,fecha_emision,ruta_final,ruta_imagen_sunat,resultado_importe)
-                                        resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente_birlik}", "Enviar Factura")'
-            
-                                    resultado_birlik = True
+                            if resultado is None:
+                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
                                     break
-                                else:
-                                    resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
-                                                                          
-                            else:
-                                raise Exception(f"No se descargo la Factuta '{comprobante}'.")
+                            elif resultado:
 
-                        except Exception as e:
-                            print(f"No se pudo descargar el PDF,Flujo Terminado con estado {estado_pago}, error: {e}")
+                                resultado_sunat = True
+
+                                if estado_Cuota_birlik == "Pendiente-comprobante":
+
+                                    print("📤 Subiendo comprobante a Birlik...")
+                                    agregar_comprobante_pago(driver,wait,id_cuota_birlik,ruta_final)
+                                    resultado_accion = "Factura Enviada Anteriormente"
+
+                                else:
+
+                                    print("📤 Subiendo todos los documentos a Birlik...")
+                                    cancelar_y_agregar_cuota(driver,wait,id_cuota_birlik,comprobante,fecha_emision,ruta_final,ruta_imagen_sunat,resultado_importe)
+                                    resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente_birlik}", "Enviar Factura")'
+            
+                                resultado_birlik = True
+                                break
+                            else:
+                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
+                                                                          
+                        else:
+                            raise Exception(f"No se descargo la Factuta '{comprobante}'")
 
                 else:
-                    print(f"La Poliza {numero_poliza_birlik} tiene estado de Pago '{estado_pago}',estado de emision '{estado_emision}', y estado de compañia '{estado_compania}'.")
+                    print(f"⚠️ La Poliza {numero_poliza_birlik} tiene estado de Pago '{estado_pago}',estado de emision '{estado_emision}', y estado de compañia '{estado_compania}'")
                     resultado_accion  = "Esperar a que pague"
                     break
 
@@ -282,7 +268,8 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
             print(f"❌ No se encontró ninguna fila que coincida con el código de cuota {numero_proforma_birlik} o {numero_poliza_birlik}-R{numero_proforma_birlik}.")
         
     except Exception as e:
-        print(f"Detalles del error: {e}")
+        print(f"⚠️ Conclusión: {e}")
+        tomar_captura(driver,ruta_carpeta_errores,f"Error_fila {index+2}.png")
     finally:
         driver.refresh()
         return f"Coinciden" if resultado_importe else f"No coinciden" ,"Válido" if resultado_sunat else "No Válido" ,"Registrado" if resultado_birlik else "No registrado" , resultado_estado, resultado_accion
@@ -316,11 +303,11 @@ def main():
             try:
                 enviarCaptcha(para_lista,copias_lista,puerto,"Crecer Vida Ley")
             except Exception as e:
-                raise Exception(f"Error enviando el correo -> {e}")
+                raise Exception(f"Error enviando el correo")
 
             try:
                 desbloquear_interaccion()
-                wait_humano = WebDriverWait(driver,300)
+                wait_humano = WebDriverWait(driver,3600)
                 wait_humano.until(EC.presence_of_element_located((By.XPATH, "//a[contains(normalize-space(),'Cerrar sesión')]")))
             except TimeoutException as e:
                 raise Exception("Se acabo el tiempo para ingresar a la compañia")
@@ -372,7 +359,7 @@ def main():
 
                         try:
                             importe_estado, sunat_estado, birlik_estado,estado_estado,accion_estado = procesar_fila(
-                                driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores)
+                                driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,index)
 
                             df.at[index, "Importe"] = importe_estado
                             df.at[index, "Sunat"] = sunat_estado

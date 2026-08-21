@@ -12,11 +12,14 @@ import random
 
 #-------------- Lock File -------------
 # Ruta del directorio compartido entre contenedores
-SYNC_DIR = "/app/sync"
+#SYNC_DIR = "/app/sync"
 # Asegurar que exista dentro del volumen (solo la primera vez)
-os.makedirs(SYNC_DIR, exist_ok=True)
+#os.makedirs(SYNC_DIR, exist_ok=True)
 # Archivo de lock compartido
-LOCK_FILE = os.path.join(SYNC_DIR, "session.lock")
+#LOCK_FILE = os.path.join(SYNC_DIR, "session.lock")
+
+def time_espera_alea(min_seg,max_seg):
+     return time.sleep(random.uniform(min_seg,max_seg))
 
 def mover_y_hacer_click_simple(driver, elemento, steps=6, pause_between=0.06):
     """
@@ -50,48 +53,84 @@ def validar_pagina(driver):
 
     asunto = ""
 
+    page = driver.page_source
+
+    # Error de Chrome: conexión reseteada
+    if "ERR_CONNECTION_RESET" in page:
+        return False, "Chrome: ERR_CONNECTION_RESET"
+
+    # Otros errores de Chrome
+    errores_chrome = [
+        "ERR_CONNECTION_TIMED_OUT",
+        "ERR_NAME_NOT_RESOLVED",
+        "ERR_CONNECTION_REFUSED",
+        "ERR_INTERNET_DISCONNECTED"
+    ]
+
+    for error in errores_chrome:
+        if error in page:
+            return False, f"Chrome: {error}"
+
+    if "The requested URL was rejected. Please consult with your administrator." in page:
+        return False, "Página web de La Positiva fuera de Servicio"
+
+    if "404 - File or directory not found." in page:
+        return False, "Página 404 - Archivo o directorio no encontrado"
+
+    overlay = (By.ID, "ID_MODAL_PROCESS")
+    user_field_1 = (By.NAME, "txtUsuario")
+    user_field_2 = (By.NAME, "username")
+
     try:
+        WebDriverWait(driver, 5).until(
+            EC.any_of(
+                EC.visibility_of_element_located(overlay),
+                EC.presence_of_element_located(user_field_1),
+                EC.presence_of_element_located(user_field_2)
+            )
+        )
 
-        # Validar si aparece el mensaje de error en el body
-        if "The requested URL was rejected. Please consult with your administrator." in driver.page_source:
-            asunto = "❌ Página web de La Positiva fuera de Servicio"
-            return False,asunto
+        loader = driver.find_elements(*overlay)
+        if loader and loader[0].is_displayed():
+            return False, "La página está demorando demasiado en cargar"
 
-        # Validar si aparece el campo de usuario
-        user_field = WebDriverWait(driver,5).until(EC.presence_of_element_located((By.NAME, "txtUsuario")))
-        if user_field:
-            asunto = "Aparecio otra página web"
-            return False,asunto
+        if driver.find_elements(*user_field_1):
+            return False, "Redireccionó a otra página (login)"
+
+        if driver.find_elements(*user_field_2):
+            return False, "Redireccionó a otra página (login)"
+
+        return True, asunto
 
     except TimeoutException:
-        return True,asunto
+        return True, asunto
 
-def acquire_lock():
-    try:
-        # Intentar crear el archivo de lock
-        fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-        return True
-    except FileExistsError:
-        # Ya existe => alguien más tiene el lock
-        return False
+# def acquire_lock():
+#     try:
+#         # Intentar crear el archivo de lock
+#         fd = os.open(LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+#         os.write(fd, str(os.getpid()).encode())
+#         os.close(fd)
+#         return True
+#     except FileExistsError:
+#         # Ya existe => alguien más tiene el lock
+#         return False
 
-def release_lock():
-    try:
-        os.remove(LOCK_FILE)
-        print("🔓 Lock liberado.")
-    except FileNotFoundError:
-        pass
+# def release_lock():
+#     try:
+#         os.remove(LOCK_FILE)
+#         print("🔓 Lock liberado.")
+#     except FileNotFoundError:
+#         pass
 
-def wait_for_lock():
-    print("🔒 Esperando que se libere el lock...")
-    while True:
-        if not os.path.exists(LOCK_FILE):
-            if acquire_lock():
-                print("✅ Lock adquirido.")
-                return True
-        time.sleep(5)  # espera 5 segundos antes de volver a intentar
+# def wait_for_lock():
+#     print("🔒 Esperando que se libere el lock...")
+#     while True:
+#         if not os.path.exists(LOCK_FILE):
+#             if acquire_lock():
+#                 print("✅ Lock adquirido.")
+#                 return True
+#         time.sleep(5)  # espera 5 segundos antes de volver a intentar
 
 def parse_fecha(fecha_raw):
     # Si ya es Timestamp, la retorna igual

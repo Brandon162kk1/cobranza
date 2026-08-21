@@ -37,6 +37,34 @@ def consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,ruc_cliente,c
     campo_ruc_emi.send_keys(ruc_compania)
     print(f"✅ RUC de la compania ingresado : {ruc_compania}")
 
+    #--------------
+    if tipo_doc_birlik == "RUC":
+        tip_doc_rec = '6' #RUC
+        tipo_compro = '03' #FE
+        doc = 'Factura Electrónica'
+        nom  = 'RUC'
+    elif tipo_doc_birlik == "CEX":
+        tip_doc_rec = '4' #CEX
+        tipo_compro = '06' #FE
+        doc = 'Boleta Electrónica'
+        nom  = 'Carne Extranejeria'
+    else:
+        tip_doc_rec = '1'   #DNI
+        tipo_compro = '06' #BE
+        doc = 'Boleta Electrónica'
+        nom  = 'DNI'
+    #--------------
+    select_element = wait.until(EC.element_to_be_clickable((By.NAME, "tipocomprobante")))
+    select1 = Select(select_element)
+    select1.select_by_value(tipo_compro)
+    print(f"✅ Tipo Comprobante: {nom} - {tipo_compro}")
+
+    select_element2 = wait.until(EC.element_to_be_clickable((By.NAME, "cod_docide")))
+    select2 = Select(select_element2)
+    select2.select_by_value(tip_doc_rec)
+    print(f"✅ Tipo Doc Cliente: {tip_doc_rec}")
+    #--------------
+
     campo_ruc_rec = wait.until(EC.element_to_be_clickable((By.NAME, "num_docide")))
     campo_ruc_rec.clear()
     campo_ruc_rec.send_keys(ruc_cliente)
@@ -70,35 +98,10 @@ def consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,ruc_cliente,c
     campo_monto.send_keys(monto)
     print(f"✅ Monto: {monto}")
 
-    if tipo_doc_birlik == "RUC":
-        tip_doc_rec = '6' #RUC
-        tipo_compro = '03' #FE
-        doc = 'Factura Electrónica'
-        nom  = 'RUC'
-    elif tipo_doc_birlik == "CEX":
-        tip_doc_rec = '4' #CEX
-        tipo_compro = '06' #FE
-        doc = 'Boleta Electrónica'
-        nom  = 'Carne Extranejeria'
-    else:
-        tip_doc_rec = '1'   #DNI
-        tipo_compro = '06' #BE
-        doc = 'Boleta Electrónica'
-        nom  = 'DNI'
-
-    select_element = wait.until(EC.element_to_be_clickable((By.NAME, "tipocomprobante")))
-    select1 = Select(select_element)
-    select1.select_by_value(tipo_compro)
-    print(f"✅ Tipo Comprobante: {nom} - {tipo_compro}")
-
-    select_element2 = wait.until(EC.element_to_be_clickable((By.NAME, "cod_docide")))
-    select2 = Select(select_element2)
-    select2.select_by_value(tip_doc_rec)
-    print(f"✅ Tipo Doc Cliente: {tip_doc_rec}")
-
     boton_buscar = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Buscar']")))
     driver.execute_script("arguments[0].scrollIntoView(true);", boton_buscar)
     boton_buscar.click()
+    print(f"🖱️ Clic en 'Buscar'")
 
     print("🕐 Esperando resultado de SUNAT")
 

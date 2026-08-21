@@ -183,78 +183,147 @@ def buscaryRegistrarenCrecer(driver,wait,fecha_emision_valor,comprobante_valor,i
                         wait.until(EC.visibility_of(boton_descarga))
                         ventana_cia = driver.current_window_handle
 
-                        #------------------------------------------------------
-                        # Guardar archivos antes del clic
                         archivos_antes = set(os.listdir(ruta_carpeta_facturas))
 
                         driver.execute_script("arguments[0].click();", boton_descarga)
                         print("🖱️ Clic con JS en el botón de descarga")
 
-                        archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
+                        # archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
 
-                        if archivo_nuevo:
-                            print(f"✅ Factura descargado exitosamente")
-                            ruta_original = archivo_nuevo[0]
-                            ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{comprobante_valor}.pdf")
-                            os.rename(ruta_original, ruta_final)
-                            print(f"🔄 Archivo renombrado a '{numero_poliza}_{comprobante_valor}.pdf'")
-                        else:
-                            raise Exception(" No se encontró archivo nuevo después de descargar")
-                        #---------------------------------------------------------
+                        # if archivo_nuevo:
+                        #     print(f"✅ Factura descargado exitosamente")
+                        #     ruta_original = archivo_nuevo[0]
+                        #     ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{doc_valor}.pdf")
+                        #     os.rename(ruta_original, ruta_final)
+                        #     print(f"🔄 Archivo renombrado a '{numero_poliza}_{doc_valor}.pdf'")
+                        # else:
+                        #     raise Exception(" No se encontró archivo nuevo después de descargar")
 
-                        time.sleep(3)
+                        # time.sleep(3)
 
-                        fechas_habiles = []
-                        fecha_emision_probar = datetime.strptime(fecha_emision_valor, "%d/%m/%Y")
-                        fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
+                        # fechas_habiles = []
+                        # fecha_emision_extraida = obtener_fecha_emision(ruta_final)
 
-                        while len(fechas_habiles) < 15:
-                            fecha_emision_probar += timedelta(days=1)
+                        # fecha_emision_probar = datetime.strptime(fecha_emision_extraida, "%d/%m/%Y") # fecha_emision_valor
+                        # fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
 
-                            if fecha_emision_probar.date() >= get_fecha_hoy().date():
-                                break
+                        # # # Hasta tener 15 fechas consecutivas (incluye sábados y domingos)
+                        # # while len(fechas_habiles) < 15:
+                        # #     fecha_emision_probar += timedelta(days=1)
 
-                            fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
+                        # #     # Si la siguiente fecha es mayor que hoy, se detiene
+                        # #     if fecha_emision_probar.date() >= get_fecha_hoy().date():
+                        # #         break
 
-                        print(f"📅 Fechas de Emisión a probar:{fechas_habiles}")
+                        # #     fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
 
-                        for fecha in fechas_habiles:
-                            print("---------------------------------------")
-                            print(f"⌛ Probando con la Fecha hábil: {fecha}")
+                        # # print(f"📅 Fechas de Emisión a probar: {fechas_habiles}")
 
-                            #------------INGRESA A SUNAT-------  
-                            nombre_imagen_sunat = f"{numero_proforma}_{numero_poliza}.png"
-                            ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
-                            resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,comprobante_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
+                        # for fecha in fechas_habiles:
+                        #     print("---------------------------------------")
+                        #     print(f"⌛ Probando con la Fecha hábil: {fecha}")
 
-                            driver.switch_to.window(ventana_cia)
-                            print("🔄 Volviendo a la ventana de la CIA")
+                        #     #------------INGRESA A SUNAT-------  
+                        #     nombre_imagen_sunat = f"{numero_proforma}_{numero_poliza}.png"
+                        #     ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
+                        #     resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,doc_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
 
-                            if resultado is None:
-                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
-                                break
-                            elif resultado:
+                        #     driver.switch_to.window(ventana_cia)
+                        #     print("🔄 Volviendo a la ventana de la CIA")
 
-                                resultado_sunat = True
+                        #     if resultado is None:
+                        #         resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
+                        #         #break
+                        #         raise Exception("SUNAT bloqueado por firewall")
+                        #     elif resultado:
 
-                                if estadoCuota_birlik == "Pendiente-comprobante":
-                                    print("📤 Subiendo comprobante a Birlik...")
-                                    agregar_comprobante_pago(driver,wait,id_cuota,ruta_final)
-                                    resultado_accion = "Factura Enviada Anteriormente"
-                                else:
-                                    print("📤 Subiendo todos los documentos a Birlik...")
-                                    cancelar_y_agregar_cuota(driver,wait,id_cuota,comprobante_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
-                                    resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente}", "Enviar Factura")'
+                        #         resultado_sunat = True
+
+                        #         if estadoCuota_birlik == "Pendiente-comprobante":
+                        #             print("📤 Subiendo comprobante a Birlik...")
+                        #             agregar_comprobante_pago(driver,wait,id_cuota,ruta_final)
+                        #             resultado_accion = "Factura Enviada Anteriormente"
+                        #         else:
+                        #             print("📤 Subiendo todos los documentos a Birlik...")
+                        #             cancelar_y_agregar_cuota(driver,wait,id_cuota,doc_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
+                        #             resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente}", "Enviar Factura")'
             
-                                resultado_birlik = True
-                                break  # Salir del bucle porque ya funcionó con esa fecha
+                        #         resultado_birlik = True
+                        #         break  # Salir del bucle porque ya funcionó con esa fecha
 
-                            else:
-                                resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
-                                continue # Si no es True, salta al siguiente intento
+                        #     else:
+                        #         resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
+                        #         continue # Si no es True, salta al siguiente intento
 
                     except Exception as ex:
                         print(f"Error general al intentar interactuar con el menú desplegable, Detalles: {ex}") 
+
+                    archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
+
+                    if archivo_nuevo:
+                        print(f"✅ Factura descargado exitosamente")
+                        ruta_original = archivo_nuevo[0]
+                        ruta_final = os.path.join(ruta_carpeta_facturas, f"{numero_poliza}_{doc_valor}.pdf")
+                        os.rename(ruta_original, ruta_final)
+                        print(f"🔄 Archivo renombrado a '{numero_poliza}_{doc_valor}.pdf'")
+                    else:
+                        raise Exception(" No se encontró archivo nuevo después de descargar")
+
+                    time.sleep(3)
+
+                    fechas_habiles = []
+                    fecha_emision_extraida = obtener_fecha_emision(ruta_final)
+
+                    fecha_emision_probar = datetime.strptime(fecha_emision_extraida, "%d/%m/%Y") # fecha_emision_valor
+                    fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
+
+                    # # Hasta tener 15 fechas consecutivas (incluye sábados y domingos)
+                    # while len(fechas_habiles) < 15:
+                    #     fecha_emision_probar += timedelta(days=1)
+
+                    #     # Si la siguiente fecha es mayor que hoy, se detiene
+                    #     if fecha_emision_probar.date() >= get_fecha_hoy().date():
+                    #         break
+
+                    #     fechas_habiles.append(fecha_emision_probar.strftime("%d/%m/%Y"))
+
+                    # print(f"📅 Fechas de Emisión a probar: {fechas_habiles}")
+
+                    for fecha in fechas_habiles:
+                        print("---------------------------------------")
+                        print(f"⌛ Probando con la Fecha hábil: {fecha}")
+
+                        #------------INGRESA A SUNAT-------  
+                        nombre_imagen_sunat = f"{numero_proforma}_{numero_poliza}.png"
+                        ruta_imagen_sunat = os.path.join(ruta_carpeta_comprobante, nombre_imagen_sunat)
+                        resultado = consultarValidezSunat(driver,wait,ruc_compania,tipo_doc_birlik,numero_ruc,doc_valor,fecha,importe_valor,ruta_imagen_sunat,ruta_carpeta_errores)
+
+                        driver.switch_to.window(ventana_cia)
+                        print("🔄 Volviendo a la ventana de la CIA")
+
+                        if resultado is None:
+                            resultado_accion = f'=HYPERLINK("{url_sunat}", "Sunat Bloqueado")'
+                            #break
+                            raise Exception("SUNAT bloqueado por firewall")
+                        elif resultado:
+
+                            resultado_sunat = True
+
+                            if estadoCuota_birlik == "Pendiente-comprobante":
+                                print("📤 Subiendo comprobante a Birlik...")
+                                agregar_comprobante_pago(driver,wait,id_cuota,ruta_final)
+                                resultado_accion = "Factura Enviada Anteriormente"
+                            else:
+                                print("📤 Subiendo todos los documentos a Birlik...")
+                                cancelar_y_agregar_cuota(driver,wait,id_cuota,doc_valor,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
+                                resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente}", "Enviar Factura")'
+            
+                            resultado_birlik = True
+                            break  # Salir del bucle porque ya funcionó con esa fecha
+
+                        else:
+                            resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
+                            continue # Si no es True, salta al siguiente intento
     
         if not fila_encontrada_descarga:
             print("❌ No se encontró la fila con el Documento esperado en la tabla de comprobantes.")

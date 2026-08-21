@@ -14,7 +14,7 @@ from Codigo.Sunat.validar_factura import consultarValidezSunat,url_sunat
 from Codigo.Birlik.cancelar_cuotas import agregar_comprobante_pago,cancelar_y_agregar_cuota
 from Codigo.Birlik.urls import url_cuotas_canceladas,url_datos_para_cancelar_cuotas
 from Codigo.Apis.Birlik.metodo import consultarAPI
-from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos
+from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos, tomar_captura
 from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
 from Codigo.Apis.Compania.get import codigo_compania
 
@@ -42,7 +42,7 @@ def limpiar(valor):
     valor = valor.strip()
     return valor if valor else ""
 
-def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores):
+def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errores,index):
 
     #--Extraer valores y quitar espacios en blanco
     numero_poliza_birlik = str(row["numeroPoliza"]).strip()
@@ -82,25 +82,33 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
         #time.sleep(2)
         print("🖱️ Clic en el # de Póliza")
 
-        poliza_input = wait.until(EC.presence_of_element_located((By.ID, "mat-input-5")))
+        #poliza_input = wait.until(EC.element_to_be_clickable((By.ID, "mat-input-5")))
+
+        poliza_input = wait.until(
+            EC.element_to_be_clickable((
+                By.XPATH,
+                "//mat-form-field[.//mat-label[contains(.,'Nro. Póliza')]]//input"
+            ))
+        )
+
         poliza_input.clear()
         poliza_input.send_keys(numero_poliza_birlik)
-        print(f"⌨️ Digitando la póliza '{numero_poliza_birlik}'.")
+        print(f"⌨️ Digitando la póliza '{numero_poliza_birlik}'")
 
         time.sleep(3)
 
         buscar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[normalize-space()='Buscar']")))
         buscar_btn.click()
-        print("🖱️ Clic en 'Buscar'.")
+        print("🖱️ Clic en 'Buscar'")
 
         try:
-            print("⌛ Esperando que cargue la tabla...")
+            print("⌛ Esperando que cargue la tabla")
             wait.until(
                 EC.presence_of_element_located((
                     By.XPATH, "(//ul[contains(@class,'g-tbl-row')])[2]"
                 ))
             )
-            print("📄 La tabla cargó correctamente.")
+            print("✅ La tabla cargó correctamente")
         except:
             raise Exception("No cargó la tabla")
 
@@ -139,7 +147,7 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                         f"Fecha de Pago: {fecha_pago_fila or placeholder}"
                     )
                     diferencia = abs(float(importe_fila) - float(importe_total_birlik))
-                    print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(importe_fila)}")
+                    #print(f"Importe de Birlik: {float(importe_total_birlik)} -- Importe de la Compañía : {float(importe_fila)}")
                     if diferencia > 0.05:
                         print("❌ Los importes No coinciden")
                     else:
@@ -151,21 +159,19 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                         resultado_accion = "Esperar"
                         break
 
-                    # OPCIONAL: marcar checkbox
                     checkbox = fila.find_element(By.XPATH, ".//input[@type='checkbox']")
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", checkbox)
                     driver.execute_script("arguments[0].click();", checkbox)
-                    print("🖱️ Clic en el 'Checkbox'.")
+                    print("🖱️ Clic en el 'Checkbox'")
 
                     time.sleep(2)
 
                     ventana_principal_mapfre = driver.current_window_handle
 
-                    # Guardar archivos antes del clic
                     archivos_antes = set(os.listdir(ruta_carpeta_facturas))
 
                     driver.execute_script("arguments[0].click();", columnas[11])
-                    print("✅ Se hizo clic con JS en el botón de descarga")
+                    print("🖱️ Clic con JS en el botón de descarga")
 
                     archivo_nuevo = esperar_archivos_nuevos(ruta_carpeta_facturas,archivos_antes,".pdf",cantidad=1)
 
@@ -178,7 +184,6 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                     else:
                         raise Exception("No se encontró archivo nuevo después de descargar")
                 
-                    # Lista para guardar las fechas
                     fecha_habiles_factura = []
 
                     fecha_emision_probar = datetime.strptime(fecha_pago_fila, "%d/%m/%Y")
@@ -189,7 +194,6 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
 
                     for fecha in fecha_habiles_factura:
                         print("---------------------------------------")
-                        #print(f"⌛ Probando con la Fecha hábil: {fecha}")
 
                         #------------INGRESA A SUNAT-------  
                         nombre_imagen_sunat = f"{numero_proforma_birlik}_{numero_poliza_birlik}.png"
@@ -211,17 +215,16 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                                 agregar_comprobante_pago(driver,wait,id_cuota_birlik,ruta_final)
                                 resultado_accion = "Factura Enviada Anteriormente"
                             else:
-                                # Subir comprobante a Birlik
                                 print("📤 Subiendo todos los documentos a Birlik...")
                                 cancelar_y_agregar_cuota(driver,wait,id_cuota_birlik,numero_factura,fecha,ruta_final,ruta_imagen_sunat,resultado_importe)
                                 resultado_accion = f'=HYPERLINK("{url_cuotas_canceladas}{fk_Cliente_birlik}", "Enviar Factura")'
             
                             resultado_birlik = True
-                            break  # Salir del bucle porque ya funcionó con esa fecha
+                            break
 
                         else:
                             resultado_accion = f'=HYPERLINK("{url_sunat}", "Ver Sunat")'
-                            continue # Si no es True, salta al siguiente intento
+                            continue
 
                     break              
 
@@ -229,25 +232,22 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
                 break
 
             if not encontrado:
-                try:
-                    # Buscar el botón sin lanzar error
-                    btn_siguiente_list = driver.find_elements(By.XPATH, "//button[@aria-label='Siguiente página']")
 
-                    # Si no existe el botón
+                try:
+                    #btn_siguiente_list = driver.find_elements(By.XPATH, "//button[@aria-label='Siguiente página']")
+                    btn_siguiente_list = wait.until(EC.presence_of_element_located((By.XPATH, "//button[@aria-label='Siguiente página']")))
+
                     if not btn_siguiente_list:
                         raise Exception(f"No existe el botón 'Siguiente página' porque no hay resultados para la póliza '{numero_poliza_birlik}'")
 
-                    # Tomar el botón encontrado
-                    btn_siguiente = btn_siguiente_list[0]
+                    #btn_siguiente = btn_siguiente_list[0]
 
-                    # Si está deshabilitado → NO HAY MÁS PÁGINAS
-                    if btn_siguiente.get_attribute("disabled"):
+                    if btn_siguiente_list.get_attribute("disabled"):
                         raise Exception("No hay más páginas")
 
-                    # Hacer scroll y clic
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});",btn_siguiente)
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});",btn_siguiente_list)
                     time.sleep(2)
-                    btn_siguiente.click()
+                    btn_siguiente_list.click()
 
                     print("🔄 Cambiando a la siguiente página...")
                     time.sleep(2)
@@ -262,14 +262,20 @@ def procesar_fila(driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante
             raise Exception(f"No se encontró ninguna fila con el código {numero_proforma_birlik}")
 
     except Exception as e:
+        # import traceback
+        # print(type(e).__name__)
+        # print(e)
+        # traceback.print_exc()
         print(f"❌ Error Procesando toda la fila, Motivo: {e}")
+        tomar_captura(driver,ruta_carpeta_errores,f"Error_fila_{index+2}")
+
     finally:
         limpiar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[normalize-space()='Limpiar']")))
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", limpiar_btn)
-        time.sleep(0.3)
+        #time.sleep(0.3)
         wait.until(lambda d: limpiar_btn.location['y'] > 0)
         limpiar_btn.click()
-        print("🖱️ Clic en 'Limpiar'.")
+        print("🖱️ Clic en 'Limpiar'")
         return f"Coinciden" if resultado_importe else f"No coinciden" ,"Válido" if resultado_sunat else "No Válido" ,"Cuota Cancelada" if resultado_birlik else "Cuota Pendiente" , "No indica" if resultado_estado is None else resultado_estado ,resultado_accion
 
 def main():
@@ -291,12 +297,12 @@ def main():
             user_input = wait.until(EC.presence_of_element_located((By.ID, "mat-input-1")))
             user_input.clear()
             user_input.send_keys(username)
-            print("⌨️ Digitando el Username")
+            print(f"⌨️ Digitando el Username {username}")
         
             pass_input = wait.until(EC.presence_of_element_located((By.ID, "mat-input-0")))
             pass_input.clear()
             pass_input.send_keys(password)
-            print("⌨️ Digitando el Password")
+            print(f"⌨️ Digitando el Password {password}")
 
             ingresar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Ingresar')]")))
             ingresar_btn.click()
@@ -344,7 +350,7 @@ def main():
                     # if not enviarAviso(para_lista, copias_lista, "Mapfre"):
                     #     raise Exception("No se pudo enviar el correo")
 
-                    boton_cerrar = wait.until( EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))
+                    boton_cerrar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))
                     driver.execute_script("arguments[0].click();", boton_cerrar)
                     print("✅ Modal cerrado correctamente")
 
@@ -356,8 +362,33 @@ def main():
             except TimeoutException:
                 pass
 
-            consulta_gestion = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[normalize-space()='CONSULTAS DE GESTION']")))
-            consulta_gestion.click()
+            # Esperar que no exista ningún diálogo visible
+            wait.until(
+                EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, "mat-dialog-container")
+                )
+            )
+
+            # Esperar que desaparezca el backdrop de Angular Material (si existe)
+            wait.until(
+                EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, ".cdk-overlay-backdrop")
+                )
+            )
+            # consulta_gestion = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[normalize-space()='CONSULTAS DE GESTION']")))
+            # consulta_gestion.click()
+
+            consulta_gestion = wait.until(
+                EC.presence_of_element_located(
+                    (
+                        By.XPATH,
+                        "//div[contains(@class,'c-box-module')][.//span[normalize-space()='CONSULTAS DE GESTION']]"
+                    )
+                )
+            )
+
+            driver.execute_script("arguments[0].click();", consulta_gestion)
+
             print("🖱️ Clic en 'CONSULTAS DE GESTION'")
           
             action = ActionChains(driver)   
@@ -402,7 +433,7 @@ def main():
                         try:
 
                             importe_estado,sunat_estado,birlik_estado,estado_estado,accion_estado = procesar_fila(
-                                driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errore)
+                                driver,wait,row,ruta_carpeta_facturas,ruta_carpeta_comprobante,ruta_carpeta_errore,index)
 
                             df.at[index, "Importe"] = importe_estado
                             df.at[index, "Sunat"] = sunat_estado
@@ -414,6 +445,7 @@ def main():
                         except Exception as e:
                             print(f"❌ Error en fila {index}, Motivo: {e}")
                         finally:
+                            driver.refresh()
                             df.to_excel(ruta_salida, index=False)
 
                 except Exception as e:
@@ -431,7 +463,7 @@ def main():
                 shutil.rmtree(carpeta_compañia)
                 #print("🧹 Carpeta eliminada correctamente")
 
-            print("⌛ Esperando 30 minutos para intentar reiniciar el proceso")
+            print("⌛ Esperando 30 minutos para intentar reiniciar el proceso\n")
             time.sleep(1800)
             
 if __name__ == "__main__":
