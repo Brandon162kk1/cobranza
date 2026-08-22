@@ -19,8 +19,8 @@ config.json
 *.log
 
 # --- Archivos de datos ---
-#*.xlsx
-#*.pdf
+*.xlsx
+*.pdf
 
 # --- Docker ---
 *.pid

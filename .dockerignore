@@ -1,4 +1,4 @@
-# IDEs
+# ---IDEs ---
 .vscode/
 .idea/
 .vs/
@@ -6,23 +6,27 @@
 *.suo
 *.user
 
-# Python
+# --- Python ---
 __pycache__/
 *.pyc
 *.pyo
 
-# Variables de entorno / secretos
-.env
+# --- Variables de entorno / secretos ---
 *.env
 config.json
 
-# Logs
+# --- Logs ---
 *.log
 
-# Archivos de datos que no necesitas en la imagen
+# --- Archivos de datos ---
 *.xlsx
 *.pdf
 
-# Archivos generados temporales
-Downloads/
+# --- Docker ---
 *.pid
+
+# --- Carpetas y files ---
+VerificarCuotas/
+
+# --- Supervisord ---
+Supervisord/supervisord_vf_cuotas.conf
