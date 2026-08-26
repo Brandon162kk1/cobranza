@@ -72,17 +72,6 @@ services:
       - DISPLAY_NUM=4
     command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_qualitas.conf
 
-  rpa_rimac:
-    profiles: [ "rimac" ]
-    <<: *rpa-base
-    container_name: cuotasRimac
-    ports:
-      - "6085:6085"
-    environment:
-      - NOVNC_PORT=6085
-      - DISPLAY_NUM=5
-    command: supervisord -c /app/Codigo/Supervisord/supervisord_cuotas_rimac.conf
-
   rpa_crecer:
     profiles: [ "crecer" ]
     <<: *rpa-base
@@ -114,7 +103,7 @@ services:
     environment:
       - NOVNC_PORT=6088
       - DISPLAY_NUM=8
-    command: supervisord -c /app/Codigo/Supervisord/supervisord_facturas.conf
+    command: supervisord -c /app/Codigo/Supervisord/supervisord_enviar_facturas.conf
 
 networks:
   orchestrator_network:

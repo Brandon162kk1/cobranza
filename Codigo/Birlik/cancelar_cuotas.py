@@ -131,7 +131,7 @@ def cancelar_y_agregar_cuota(driver, wait, id_cuota,comprobante_valor,fecha_emis
         driver.switch_to.window(ventana_principal_cia)
         print("🔄 Cerrando Birlik y volviendo a la CIA")
 
-def iniciar_sesion_birlik(driver, wait,id_elemento):
+def iniciar_sesion_birlik(wait,id_elemento):
 
     input_email = (By.ID, "signinSrEmail")
     input_password = (By.ID, "signupSrPassword")

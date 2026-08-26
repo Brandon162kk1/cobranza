@@ -27,10 +27,6 @@ ids_compania = [25]
 url_protecta = os.getenv("url_protecta")
 username_protecta = os.getenv("username_protecta")
 password_protecta = os.getenv("password_protecta")
-para_venv = os.getenv("para")
-para_lista = para_venv.split(",") if para_venv else []
-copia_venv = os.getenv("copia_cuotas")
-copias_lista = copia_venv.split(",") if copia_venv else []
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Protecta_VidaLey"
 
@@ -365,7 +361,7 @@ def main():
 
             desbloquear_interaccion()
             
-            enviarCaptcha(para_lista,copias_lista,puerto,"Protecta Vida Ley")
+            enviarCaptcha(puerto,"Protecta Vida Ley")
             wait_humano = WebDriverWait(driver,300)
             wait_humano.until(EC.presence_of_element_located((By.XPATH,"//a[contains(@class,'menu-item-father')][not(@hidden)]//span[normalize-space()='Mis Comprobantes']/ancestor::a")))
 

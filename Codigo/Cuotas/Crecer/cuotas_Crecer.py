@@ -27,9 +27,6 @@ login_url_crecer_vida_ley = os.getenv("login_url_crecer_vida_ley")
 puerto = os.getenv("NOVNC_PORT")
 username_crecer = os.getenv("username_crecer")
 password_crecer = os.getenv("password_crecer")
-
-copia = os.getenv("copia")
-copias_lista = copia.split(",") if copia else []
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Crecer_VidaLey_{get_timestamp()}"
 
@@ -298,7 +295,7 @@ def main():
             pass_input.send_keys(password_crecer)
             print("⌨️ Digitando el Password")
    
-            if not enviarCaptcha(copias_lista,puerto,"Crecer Vida Ley"):
+            if not enviarCaptcha(puerto,"Crecer Vida Ley"):
                 raise Exception("No se pudo enviar el correo para resolver captcha")
 
             try:

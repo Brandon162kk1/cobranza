@@ -4,14 +4,11 @@ import os
 
 # --- Variables de Entorno ---
 url_n8n_base = os.getenv("url_n8n_base")
-path_enviar_correo = os.getenv("path_enviar_correo")
-
-para = os.getenv("para")
-para_lista = para.split(",") if para else []
+path_enviar_correo = os.getenv("webhook_correo")
 
 url_n8n_enviar_correo = f"{url_n8n_base}{path_enviar_correo}"
 
-def enviar_correo(copia,asunto,mensaje):
+def enviar_correo(para,copia,asunto,mensaje):
     
     payload = {
         "Para": para,

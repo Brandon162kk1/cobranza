@@ -17,6 +17,7 @@ from Codigo.Apis.Birlik.metodo import consultarAPI
 from Codigo.GoogleChrome.chromeDriver import abrirDriver, crearCarpetas,guardarJson,esperar_archivos_nuevos, tomar_captura
 from Codigo.GoogleChrome.fecha_y_hora import get_timestamp
 from Codigo.Apis.Compania.get import codigo_compania
+from Codigo.Correo.armar_asunto import enviarAviso
 
 #--------- Datos------
 ruc_mapfre_salud = '20517182673' # Salud
@@ -28,10 +29,6 @@ username = os.getenv("usernameMapfre")
 password = os.getenv("passwordMapfre")
 url_api_cod_cot = os.getenv("url_api_cod_map")
 API_KEY = os.getenv("API_KEY_MAPFRE")
-
-copia = os.getenv("copia")
-copias_lista = copia.split(",") if copia else []
-
 #----- Carpeta de la Compañia -------
 nombre_carpeta_compañia = f"Mapfre_{get_timestamp()}"
 
@@ -346,7 +343,7 @@ def main():
                     mensaje = resultado.text.strip()
                     print(f"⚠️ Modal detectado: {mensaje}")
 
-                    # if not enviarAviso(copias_lista, "Mapfre"):
+                    # if not enviarAviso("Mapfre"):
                     #     raise Exception("No se pudo enviar el correo")
 
                     boton_cerrar = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(),'Cerrar')]]")))
